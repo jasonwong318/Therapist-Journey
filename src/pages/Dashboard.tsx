@@ -3,6 +3,7 @@ import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { todayStr, currentMonth, isInMonth } from '../lib/dates'
 import { Link } from 'react-router-dom'
+import { t } from '../lib/i18n'
 
 const CLIENT_COLORS = ['#635BFF', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
 
@@ -34,39 +35,36 @@ export const Dashboard = () => {
 
   return (
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
-      {/* Header */}
       <div>
         <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-          {new Date().toLocaleDateString('en-HK', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {new Date().toLocaleDateString('zh-HK', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
         <h1 className="text-2xl font-bold text-slate-900 mt-0.5">
-          {settings.therapistName ? `Hi, ${settings.therapistName.split(' ')[0]} 👋` : 'Dashboard'}
+          {settings.therapistName ? t.hiGreeting(settings.therapistName.split(' ')[0]) : t.dashboard}
         </h1>
       </div>
 
-      {/* Stats row */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="!p-4">
-          <p className="text-xs text-slate-400 font-medium">This month</p>
+          <p className="text-xs text-slate-400 font-medium">{t.thisMonth}</p>
           <p className="text-2xl font-bold text-[#635BFF] mt-1">{cur} {monthEarned.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{monthSessions.length} sessions</p>
+          <p className="text-xs text-slate-400 mt-0.5">{monthSessions.length} {t.sessions}</p>
         </Card>
         <Card className="!p-4">
-          <p className="text-xs text-slate-400 font-medium">Outstanding</p>
+          <p className="text-xs text-slate-400 font-medium">{t.outstanding}</p>
           <p className="text-2xl font-bold text-amber-500 mt-1">{cur} {unpaidTotal.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{unpaidInvoices.length} invoices</p>
+          <p className="text-xs text-slate-400 mt-0.5">{unpaidInvoices.length} {t.invoicesCount}</p>
         </Card>
       </div>
 
-      {/* Today */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-900">Today's Sessions</h2>
-          <Link to="/calendar" className="text-xs text-[#635BFF] font-medium">Calendar →</Link>
+          <h2 className="text-sm font-semibold text-slate-900">{t.todaySessions}</h2>
+          <Link to="/calendar" className="text-xs text-[#635BFF] font-medium">{t.calendar} →</Link>
         </div>
         {todaySessions.length === 0 ? (
           <Card>
-            <p className="text-sm text-slate-400 text-center py-3">No sessions today</p>
+            <p className="text-sm text-slate-400 text-center py-3">{t.noSessionsToday}</p>
           </Card>
         ) : (
           <div className="space-y-2">
@@ -80,10 +78,10 @@ export const Dashboard = () => {
                     <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: CLIENT_COLORS[idx % CLIENT_COLORS.length] }} />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-900 text-sm">{client.name}</p>
-                      <p className="text-xs text-slate-400">{session.startTime} · {session.duration}h · {cur} {(client.hourlyRate * session.duration).toLocaleString()}</p>
+                      <p className="text-xs text-slate-400">{session.startTime} · {session.duration}小時 · {cur} {(client.hourlyRate * session.duration).toLocaleString()}</p>
                     </div>
                     <Badge color={session.status === 'completed' ? 'green' : 'indigo'}>
-                      {session.status === 'completed' ? 'Done' : 'Upcoming'}
+                      {session.status === 'completed' ? t.done : t.upcoming}
                     </Badge>
                   </Card>
                 </Link>
@@ -93,10 +91,9 @@ export const Dashboard = () => {
         )}
       </div>
 
-      {/* Monthly per client */}
       {clientMonthly.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">Monthly Overview</h2>
+          <h2 className="text-sm font-semibold text-slate-900 mb-3">{t.monthlyOverview}</h2>
           <Card padding={false}>
             {clientMonthly.map(({ client, completed, scheduled, earned }, i) => {
               const idx = clients.indexOf(client)
@@ -106,7 +103,7 @@ export const Dashboard = () => {
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CLIENT_COLORS[idx % CLIENT_COLORS.length] }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900">{client.name}</p>
-                      <p className="text-xs text-slate-400">{completed} done · {scheduled} upcoming</p>
+                      <p className="text-xs text-slate-400">{completed} {t.done} · {scheduled} {t.upcoming}</p>
                     </div>
                     <p className="text-sm font-semibold text-slate-900">{cur} {earned.toLocaleString()}</p>
                   </div>
@@ -120,8 +117,8 @@ export const Dashboard = () => {
       {clients.filter(c => !c.archivedAt).length === 0 && (
         <Card>
           <div className="text-center py-6">
-            <p className="text-slate-500 text-sm">No clients yet.</p>
-            <Link to="/clients/new" className="mt-3 inline-block text-sm font-medium text-[#635BFF]">Add your first client →</Link>
+            <p className="text-slate-500 text-sm">{t.noClientsYet}</p>
+            <Link to="/clients/new" className="mt-3 inline-block text-sm font-medium text-[#635BFF]">{t.addFirstClient}</Link>
           </div>
         </Card>
       )}

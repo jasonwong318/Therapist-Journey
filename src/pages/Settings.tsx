@@ -4,9 +4,11 @@ import { Card } from '../components/ui/Card'
 import { Input, TextArea } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { exportData, importData } from '../lib/storage'
+import { t } from '../lib/i18n'
+import { formatDisplay } from '../lib/dates'
 
 export const Settings = () => {
-  const { settings, setSettings } = useStoreCtx()
+  const { settings, setSettings, holidays, removeHoliday } = useStoreCtx()
   const [form, setForm] = useState({ ...settings })
   const [saved, setSaved] = useState(false)
 
@@ -41,7 +43,7 @@ export const Settings = () => {
           importData(data)
           window.location.reload()
         } catch {
-          alert('Invalid backup file.')
+          alert('無效的備份檔案。')
         }
       }
       reader.readAsText(file)
@@ -54,53 +56,79 @@ export const Settings = () => {
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [key]: e.target.value })),
   })
 
+  const sortedHolidays = [...holidays].sort((a, b) => a.date.localeCompare(b.date))
+
   return (
     <div className="px-4 pt-6 pb-28 space-y-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+      <h1 className="text-2xl font-bold text-slate-900">{t.settings}</h1>
 
       {/* Profile */}
       <div>
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Therapist Profile</h2>
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t.therapistProfile}</h2>
         <Card>
           <div className="space-y-4">
-            <Input label="Your Name" placeholder="e.g. Jane Wong" {...field('therapistName')} />
-            <Input label="Email" type="email" placeholder="jane@example.com" {...field('email')} />
-            <Input label="Phone" type="tel" placeholder="+852 9xxx xxxx" {...field('phone')} />
-            <TextArea label="Payment Info (shown on invoice)" placeholder="FPS: 9xxx xxxx&#10;Bank transfer: ..." {...field('paymentInfo')} />
+            <Input label={t.yourName} placeholder={t.namePlaceholder} {...field('therapistName')} />
+            <Input label={t.email} type="email" placeholder="jane@example.com" {...field('email')} />
+            <Input label={t.phone} type="tel" placeholder="+852 9xxx xxxx" {...field('phone')} />
+            <TextArea label={t.paymentInfo} placeholder={t.paymentPlaceholder} {...field('paymentInfo')} />
           </div>
         </Card>
       </div>
 
       {/* Invoice settings */}
       <div>
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Invoice</h2>
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t.invoiceSettings}</h2>
         <Card>
           <div className="space-y-4">
-            <Input label="Currency" placeholder="HKD" {...field('currency')} />
-            <Input label="Invoice Number Prefix" placeholder="INV" {...field('invoicePrefix')} />
-            <Input label="Next Invoice Number" type="number" {...field('nextInvoiceNumber')} />
+            <Input label={t.currency} placeholder="HKD" {...field('currency')} />
+            <Input label={t.invoicePrefix} placeholder="INV" {...field('invoicePrefix')} />
+            <Input label={t.nextInvoiceNumber} type="number" {...field('nextInvoiceNumber')} />
           </div>
         </Card>
       </div>
 
       <Button fullWidth onClick={handleSave}>
-        {saved ? '✓ Saved!' : 'Save Settings'}
+        {saved ? t.saved : t.saveSettings}
       </Button>
+
+      {/* Holidays */}
+      <div>
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.holidays}</h2>
+        <p className="text-xs text-slate-400 mb-3">{t.manageHolidays}</p>
+        <Card padding={false}>
+          {sortedHolidays.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-4">{t.noHolidays}</p>
+          ) : (
+            sortedHolidays.map((h, i) => (
+              <div key={h.id} className={`flex items-center justify-between px-4 py-3 ${i < sortedHolidays.length - 1 ? 'border-b border-slate-50' : ''}`}>
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{formatDisplay(h.date)}</p>
+                  {h.label && <p className="text-xs text-slate-400">{h.label}</p>}
+                </div>
+                <button onClick={() => removeHoliday(h.date)} className="text-xs text-red-400 font-medium px-2 py-1 rounded-lg hover:bg-red-50">
+                  移除
+                </button>
+              </div>
+            ))
+          )}
+        </Card>
+        <p className="text-xs text-slate-400 mt-2 text-center">從日曆頁點擊日期可新增假期</p>
+      </div>
 
       {/* Data */}
       <div>
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Data</h2>
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t.data}</h2>
         <Card>
           <div className="space-y-3">
             <button onClick={handleExport} className="w-full flex items-center justify-between py-2 text-sm font-medium text-slate-700 hover:text-[#635BFF]">
-              <span>Export Backup (JSON)</span>
+              <span>{t.exportBackup}</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
             </button>
             <div className="border-t border-slate-100" />
             <button onClick={handleImport} className="w-full flex items-center justify-between py-2 text-sm font-medium text-slate-700 hover:text-[#635BFF]">
-              <span>Import Backup (JSON)</span>
+              <span>{t.importBackup}</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
               </svg>
@@ -109,7 +137,7 @@ export const Settings = () => {
         </Card>
       </div>
 
-      <p className="text-xs text-slate-400 text-center pb-4">All data is stored locally on this device.</p>
+      <p className="text-xs text-slate-400 text-center pb-4">{t.dataLocal}</p>
     </div>
   )
 }

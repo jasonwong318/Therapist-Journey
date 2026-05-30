@@ -53,3 +53,9 @@ export interface AppSettings {
   invoicePrefix: string
   nextInvoiceNumber: number
 }
+
+export interface Holiday {
+  id: string
+  date: string // YYYY-MM-DD
+  label: string
+}
