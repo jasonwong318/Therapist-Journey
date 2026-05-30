@@ -1,8 +1,15 @@
-import type { Client, Session } from './types'
+import type { Client, Session, Holiday } from './types'
 import { toDateStr, recurringDatesInMonth } from './dates'
 import { nanoid } from './nanoid'
 
-export const generateSessionsForMonth = (clients: Client[], existingSessions: Session[], year: number, month: number): Session[] => {
+export const generateSessionsForMonth = (
+  clients: Client[],
+  existingSessions: Session[],
+  year: number,
+  month: number,
+  holidays: Holiday[] = [],
+): Session[] => {
+  const holidayDates = new Set(holidays.map(h => h.date))
   const newSessions: Session[] = []
 
   for (const client of clients) {
@@ -11,6 +18,7 @@ export const generateSessionsForMonth = (clients: Client[], existingSessions: Se
       const dates = recurringDatesInMonth(slot.dayOfWeek, year, month)
       for (const date of dates) {
         const dateStr = toDateStr(date)
+        if (holidayDates.has(dateStr)) continue
         const alreadyExists = existingSessions.some(
           s => s.clientId === client.id && s.date === dateStr && s.startTime === slot.time && s.isRecurring
         )

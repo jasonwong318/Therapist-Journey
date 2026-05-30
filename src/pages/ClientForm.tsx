@@ -4,8 +4,7 @@ import { useStoreCtx } from '../hooks/StoreContext'
 import { Button } from '../components/ui/Button'
 import { Input, Select, TextArea } from '../components/ui/Input'
 import type { ScheduleSlot, SessionDuration } from '../lib/types'
-
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+import { t } from '../lib/i18n'
 
 export const ClientForm = () => {
   const { id } = useParams()
@@ -43,46 +42,45 @@ export const ClientForm = () => {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-slate-900">{existing ? 'Edit Client' : 'New Client'}</h1>
+        <h1 className="text-xl font-bold text-slate-900">{existing ? t.editClient : t.newClient}</h1>
       </div>
 
       <div className="space-y-4">
-        <Input label="Client Name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sarah Lee" />
-        <Input label="Hourly Rate (HKD)" type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="e.g. 800" />
-        <Select label="Default Session Duration" value={defaultDuration} onChange={e => setDefaultDuration(Number(e.target.value) as SessionDuration)}>
-          <option value={1}>1 hour</option>
-          <option value={1.5}>1.5 hours</option>
-          <option value={2}>2 hours</option>
+        <Input label={t.clientName} value={name} onChange={e => setName(e.target.value)} placeholder={t.clientNamePlaceholder} />
+        <Input label={t.hourlyRate} type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="例：800" />
+        <Select label={t.defaultDuration} value={defaultDuration} onChange={e => setDefaultDuration(Number(e.target.value) as SessionDuration)}>
+          <option value={1}>{t.oneHour}</option>
+          <option value={1.5}>{t.oneHalfHour}</option>
+          <option value={2}>{t.twoHours}</option>
         </Select>
-        <TextArea label="Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any notes about this client..." />
+        <TextArea label={t.notes} value={notes} onChange={e => setNotes(e.target.value)} placeholder={t.notesPlaceholder} />
       </div>
 
-      {/* Schedule */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-900">Weekly Schedule</h2>
-          <button onClick={addSlot} className="text-sm text-[#635BFF] font-medium">+ Add Slot</button>
+          <h2 className="text-sm font-semibold text-slate-900">{t.weeklySchedule}</h2>
+          <button onClick={addSlot} className="text-sm text-[#635BFF] font-medium">{t.addSlot}</button>
         </div>
         {schedule.length === 0 && (
           <p className="text-sm text-slate-400 text-center py-4 border-2 border-dashed border-slate-200 rounded-xl">
-            No recurring slots. Tap + Add Slot.
+            {t.noSlots}
           </p>
         )}
         <div className="space-y-3">
           {schedule.map((slot, i) => (
             <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-3">
               <div className="grid grid-cols-2 gap-2">
-                <Select label="Day" value={slot.dayOfWeek} onChange={e => updateSlot(i, { dayOfWeek: Number(e.target.value) })}>
-                  {DAYS.map((d, di) => <option key={di} value={di}>{d}</option>)}
+                <Select label={t.day} value={slot.dayOfWeek} onChange={e => updateSlot(i, { dayOfWeek: Number(e.target.value) })}>
+                  {t.daysLong.map((d, di) => <option key={di} value={di}>{d}</option>)}
                 </Select>
-                <Input label="Time" type="time" value={slot.time} onChange={e => updateSlot(i, { time: e.target.value })} />
+                <Input label={t.time} type="time" value={slot.time} onChange={e => updateSlot(i, { time: e.target.value })} />
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
-                  <Select label="Duration" value={slot.duration} onChange={e => updateSlot(i, { duration: Number(e.target.value) as SessionDuration })}>
-                    <option value={1}>1 hour</option>
-                    <option value={1.5}>1.5 hours</option>
-                    <option value={2}>2 hours</option>
+                  <Select label={t.duration} value={slot.duration} onChange={e => updateSlot(i, { duration: Number(e.target.value) as SessionDuration })}>
+                    <option value={1}>{t.oneHour}</option>
+                    <option value={1.5}>{t.oneHalfHour}</option>
+                    <option value={2}>{t.twoHours}</option>
                   </Select>
                 </div>
                 <button onClick={() => removeSlot(i)} className="mt-5 p-2 text-red-400 hover:bg-red-50 rounded-lg">
@@ -97,7 +95,7 @@ export const ClientForm = () => {
       </div>
 
       <Button fullWidth onClick={handleSubmit} disabled={!name.trim() || !hourlyRate}>
-        {existing ? 'Save Changes' : 'Add Client'}
+        {existing ? t.saveChanges : t.addClient}
       </Button>
 
       {existing && (
@@ -105,7 +103,7 @@ export const ClientForm = () => {
           updateClient(existing.id, { archivedAt: new Date().toISOString() })
           navigate('/clients')
         }}>
-          Archive Client
+          {t.archiveClient}
         </Button>
       )}
     </div>

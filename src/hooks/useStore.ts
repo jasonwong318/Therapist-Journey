@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { Client, Session, Invoice, AppSettings } from '../lib/types'
+import type { Client, Session, Invoice, AppSettings, Holiday } from '../lib/types'
 import {
   loadClients, saveClients,
   loadSessions, saveSessions,
   loadInvoices, saveInvoices,
   loadSettings, saveSettings,
+  loadHolidays, saveHolidays,
 } from '../lib/storage'
 import { generateSessionsForMonth } from '../lib/schedule'
 import { nanoid } from '../lib/nanoid'
@@ -14,22 +15,23 @@ export const useStore = () => {
   const [sessions, setSessionsState] = useState<Session[]>(() => loadSessions())
   const [invoices, setInvoicesState] = useState<Invoice[]>(() => loadInvoices())
   const [settings, setSettingsState] = useState<AppSettings>(() => loadSettings())
+  const [holidays, setHolidaysState] = useState<Holiday[]>(() => loadHolidays())
 
-  // Auto-generate sessions for current + next month on load
   useEffect(() => {
     const now = new Date()
     const months = [
-      [now.getFullYear(), now.getMonth()],
-      [now.getFullYear(), now.getMonth() + 1 > 11 ? 0 : now.getMonth() + 1],
-    ].map(([y, m]) => ({ year: y === now.getFullYear() && m === 0 && now.getMonth() === 11 ? y + 1 : y, month: m }))
+      { year: now.getFullYear(), month: now.getMonth() },
+      { year: now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear(), month: now.getMonth() === 11 ? 0 : now.getMonth() + 1 },
+    ]
 
     const current = loadClients()
     const existing = loadSessions()
+    const hols = loadHolidays()
     let allSessions = [...existing]
     let changed = false
 
     for (const { year, month } of months) {
-      const newSessions = generateSessionsForMonth(current, allSessions, year, month)
+      const newSessions = generateSessionsForMonth(current, allSessions, year, month, hols)
       if (newSessions.length > 0) {
         allSessions = [...allSessions, ...newSessions]
         changed = true
@@ -71,19 +73,27 @@ export const useStore = () => {
     saveSettings(s)
   }, [])
 
+  const setHolidays = useCallback((updater: Holiday[] | ((prev: Holiday[]) => Holiday[])) => {
+    setHolidaysState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      saveHolidays(next)
+      return next
+    })
+  }, [])
+
   const addClient = useCallback((client: Omit<Client, 'id'>) => {
     const newClient: Client = { ...client, id: nanoid() }
     setClients(prev => [...prev, newClient])
-    // Generate sessions for current + next month for new client
     const now = new Date()
     const months = [
       { year: now.getFullYear(), month: now.getMonth() },
       { year: now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear(), month: now.getMonth() === 11 ? 0 : now.getMonth() + 1 },
     ]
+    const hols = loadHolidays()
     setSessions(prev => {
       let all = [...prev]
       for (const { year, month } of months) {
-        const newSessions = generateSessionsForMonth([newClient], all, year, month)
+        const newSessions = generateSessionsForMonth([newClient], all, year, month, hols)
         all = [...all, ...newSessions]
       }
       return all
@@ -108,6 +118,21 @@ export const useStore = () => {
   const deleteSession = useCallback((id: string) => {
     setSessions(prev => prev.filter(s => s.id !== id))
   }, [setSessions])
+
+  const addHoliday = useCallback((date: string, label: string) => {
+    const h: Holiday = { id: nanoid(), date, label }
+    setHolidays(prev => [...prev, h])
+    // Cancel all scheduled recurring sessions on this date
+    setSessions(prev => prev.map(s =>
+      s.date === date && s.status === 'scheduled' && s.isRecurring
+        ? { ...s, status: 'cancelled' as const }
+        : s
+    ))
+  }, [setHolidays, setSessions])
+
+  const removeHoliday = useCallback((date: string) => {
+    setHolidays(prev => prev.filter(h => h.date !== date))
+  }, [setHolidays])
 
   const createInvoice = useCallback((clientId: string, month: string, sessionIds: string[]) => {
     const client = clients.find(c => c.id === clientId)
@@ -135,10 +160,10 @@ export const useStore = () => {
   }, [setInvoices])
 
   return {
-    clients, sessions, invoices, settings,
-    setClients, setSessions, setInvoices, setSettings,
+    clients, sessions, invoices, settings, holidays,
+    setClients, setSessions, setInvoices, setSettings, setHolidays,
     addClient, updateClient, updateSession, addSession, deleteSession,
-    createInvoice, updateInvoice,
+    addHoliday, removeHoliday, createInvoice, updateInvoice,
   }
 }
 
