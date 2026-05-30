@@ -53,7 +53,7 @@ function App() {
   const store = useStore()
   return (
     <StoreContext.Provider value={store}>
-      <BrowserRouter basename="/Testing">
+      <BrowserRouter basename="/Therapist-Journey">
         <AppShell />
       </BrowserRouter>
     </StoreContext.Provider>
