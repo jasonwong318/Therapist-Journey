@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { formatDisplayWithDay, currentMonth, isInMonth, formatMonthYear, todayStr } from '../lib/dates'
+import { getHKHolidayLabel } from '../lib/hkHolidays'
 import { t } from '../lib/i18n'
 import type { Session, SessionStatus, SessionDuration } from '../lib/types'
 
@@ -20,7 +21,7 @@ const STATUS_COLORS: Record<SessionStatus, 'green' | 'slate' | 'indigo' | 'orang
 export const ClientDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { clients, sessions, invoices, settings, createInvoice, updateSession, deleteSession, addSession } = useStoreCtx()
+  const { clients, sessions, invoices, settings, createInvoice, updateSession, updateInvoice, deleteSession, addSession, deleteInvoice } = useStoreCtx()
   const client = clients.find(c => c.id === id)
   const [selectedMonth, setSelectedMonth] = useState(currentMonth())
   const [activeSession, setActiveSession] = useState<Session | null>(null)
@@ -44,6 +45,8 @@ export const ClientDetail = () => {
   const monthTotal = completedSessions.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
   const uninvoicedSessions = completedSessions.filter(s => !s.invoiceId)
   const monthInvoice = invoices.find(inv => inv.clientId === id && inv.month === selectedMonth)
+
+  const isFutureMonth = selectedMonth > currentMonth()
 
   const openSession = (session: Session) => {
     setActiveSession(session)
@@ -84,13 +87,25 @@ export const ClientDetail = () => {
     setAddModal(false)
   }
 
+  const handleUpdateInvoice = () => {
+    if (!monthInvoice || uninvoicedSessions.length === 0) return
+    const newSessionIds = [...monthInvoice.sessionIds, ...uninvoicedSessions.map(s => s.id)]
+    const allSessions = sessions.filter(s => newSessionIds.includes(s.id))
+    const newTotal = allSessions.filter(s => s.status === 'completed' || s.status === 'late_cancel').reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+    updateInvoice(monthInvoice.id, { sessionIds: newSessionIds, totalAmount: newTotal })
+    uninvoicedSessions.forEach(s => updateSession(s.id, { invoiceId: monthInvoice.id }))
+  }
+
+  // [+3, +2, +1, current, -1, ..., -5]: future on left, past on right
   const monthOptions = () => {
     const now = new Date()
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const opts = []
+    for (let i = 3; i >= -5; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
       const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      return { value: val, label: formatMonthYear(val) }
-    })
+      opts.push({ value: val, label: formatMonthYear(val) })
+    }
+    return opts
   }
 
   return (
@@ -135,16 +150,34 @@ export const ClientDetail = () => {
               {completedSessions.length} {t.sessions} · {t.totalHours(completedSessions.reduce((s, x) => s + x.duration, 0))}
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-right space-y-1">
             {monthInvoice ? (
-              <div>
+              <>
                 <Badge color={monthInvoice.paidAt ? 'green' : monthInvoice.sentAt ? 'yellow' : 'indigo'}>
                   {monthInvoice.paidAt ? t.paid : monthInvoice.sentAt ? t.sent : t.invoiced}
                 </Badge>
                 <Link to={`/invoices/${monthInvoice.id}`}>
-                  <p className="text-xs text-[#635BFF] mt-1 font-medium">{monthInvoice.invoiceNumber}</p>
+                  <p className="text-xs text-[#635BFF] font-medium">{monthInvoice.invoiceNumber}</p>
                 </Link>
-              </div>
+                {!monthInvoice.paidAt && (
+                  <div className="flex gap-1 justify-end mt-1">
+                    {uninvoicedSessions.length > 0 && (
+                      <button
+                        onClick={handleUpdateInvoice}
+                        className="text-xs text-[#635BFF] border border-[#635BFF] px-2 py-0.5 rounded-lg font-medium"
+                      >
+                        {t.updateInvoice}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteInvoice(monthInvoice.id)}
+                      className="text-xs text-red-400 border border-red-200 px-2 py-0.5 rounded-lg font-medium"
+                    >
+                      {t.voidInvoice}
+                    </button>
+                  </div>
+                )}
+              </>
             ) : uninvoicedSessions.length > 0 ? (
               <Button size="sm" onClick={() => createInvoice(id!, selectedMonth, uninvoicedSessions.map(s => s.id))}>
                 {t.invoice}
@@ -164,26 +197,34 @@ export const ClientDetail = () => {
           <Card><p className="text-sm text-slate-400 text-center py-4">{t.noSessionsThisMonth}</p></Card>
         ) : (
           <Card padding={false}>
-            {clientSessions.map((session, i) => (
-              <button
-                key={session.id}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50 dark:active:bg-slate-700 ${i < clientSessions.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
-                onClick={() => openSession(session)}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${session.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-900 dark:text-slate-100'}`}>
-                    {formatDisplayWithDay(session.date)}
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {session.startTime} · {t.hrs(session.duration)} · {cur} {(client.hourlyRate * session.duration).toLocaleString()}
-                    {!session.isRecurring && <span className="ml-1 text-amber-500">{t.adhocTag}</span>}
-                  </p>
-                </div>
-                <Badge color={STATUS_COLORS[session.status]}>
-                  {t.statusLabels[session.status]}
-                </Badge>
-              </button>
-            ))}
+            {clientSessions.map((session, i) => {
+              const holiday = isFutureMonth ? getHKHolidayLabel(session.date) : undefined
+              return (
+                <button
+                  key={session.id}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50 dark:active:bg-slate-700 ${i < clientSessions.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
+                  onClick={() => openSession(session)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-sm font-medium ${session.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                        {formatDisplayWithDay(session.date)}
+                      </p>
+                      {holiday && (
+                        <span className="text-xs text-amber-500 font-medium">⚠ {holiday}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {session.startTime} · {t.hrs(session.duration)} · {cur} {(client.hourlyRate * session.duration).toLocaleString()}
+                      {!session.isRecurring && <span className="ml-1 text-amber-500">{t.adhocTag}</span>}
+                    </p>
+                  </div>
+                  <Badge color={STATUS_COLORS[session.status]}>
+                    {t.statusLabels[session.status]}
+                  </Badge>
+                </button>
+              )
+            })}
           </Card>
         )}
       </div>

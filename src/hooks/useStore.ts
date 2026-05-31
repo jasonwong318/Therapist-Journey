@@ -209,11 +209,16 @@ export const useStore = () => {
     setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, ...updates } : inv))
   }, [setInvoices])
 
+  const deleteInvoice = useCallback((id: string) => {
+    setInvoices(prev => prev.filter(inv => inv.id !== id))
+    setSessions(prev => prev.map(s => s.invoiceId === id ? { ...s, invoiceId: undefined } : s))
+  }, [setInvoices, setSessions])
+
   return {
     clients, sessions, invoices, settings, holidays,
     setClients, setSessions, setInvoices, setSettings, setHolidays,
     addClient, updateClient, updateSession, addSession, deleteSession,
-    addHoliday, removeHoliday, createInvoice, updateInvoice,
+    addHoliday, removeHoliday, createInvoice, updateInvoice, deleteInvoice,
     ensureSessionsForMonth,
   }
 }
