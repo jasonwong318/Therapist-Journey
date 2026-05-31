@@ -4,7 +4,7 @@ import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { Button } from '../components/ui/Button'
 import { calendarWeeks, toDateStr, formatDisplay, getMonth } from '../lib/dates'
-import { HK_HOLIDAYS } from '../lib/hkHolidays'
+import { getHKHolidayLabel } from '../lib/hkHolidays'
 import type { Session, SessionStatus, SessionDuration } from '../lib/types'
 import { t } from '../lib/i18n'
 
@@ -34,7 +34,8 @@ export const Calendar = () => {
   const userHolidayMap = new Map(holidays.map(h => [h.date, h.label || t.isHoliday]))
   const getHolidayLabel = (dateStr: string): string | null => {
     if (userHolidayMap.has(dateStr)) return userHolidayMap.get(dateStr)!
-    if (HK_HOLIDAYS[dateStr]) return HK_HOLIDAYS[dateStr]
+    const hkLabel = getHKHolidayLabel(dateStr)
+    if (hkLabel) return hkLabel
     return null
   }
   const isUserHoliday = (dateStr: string) => userHolidayMap.has(dateStr)
@@ -155,7 +156,7 @@ export const Calendar = () => {
                     <div className="w-2 h-12 rounded-full flex-shrink-0" style={{ backgroundColor: getClientColor(s.clientId) }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{client.name}</p>
-                      <p className="text-xs text-slate-400">{s.startTime} · {s.duration}小時</p>
+                      <p className="text-xs text-slate-400">{s.startTime} · {t.hrs(s.duration)}</p>
                     </div>
                     <select
                       className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300"

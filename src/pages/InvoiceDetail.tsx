@@ -28,7 +28,7 @@ export const InvoiceDetail = () => {
       `${formatMonthYear(invoice.month)} 發票`,
       `發票號碼：${invoice.invoiceNumber}`,
       ``,
-      ...invSessions.map(s => `${formatDisplay(s.date)}  ${s.duration}小時  ${cur}${(client.hourlyRate * s.duration).toLocaleString()}`),
+      ...invSessions.map(s => `${formatDisplay(s.date)}  ${t.hrs(s.duration)}  ${cur}${(client.hourlyRate * s.duration).toLocaleString()}`),
       ``,
       `總計：${cur} ${invoice.totalAmount.toLocaleString()}`,
       ``,
@@ -71,7 +71,7 @@ export const InvoiceDetail = () => {
             <div key={s.id} className={`flex items-center justify-between px-4 py-3.5 ${i < invSessions.length - 1 ? 'border-b border-slate-50' : ''}`}>
               <div>
                 <p className="text-sm font-medium text-slate-900">{formatDisplay(s.date)}</p>
-                <p className="text-xs text-slate-400">{s.startTime} · {s.duration}小時</p>
+                <p className="text-xs text-slate-400">{s.startTime} · {t.hrs(s.duration)}</p>
               </div>
               <p className="text-sm font-semibold text-slate-900">{cur} {(client.hourlyRate * s.duration).toLocaleString()}</p>
             </div>

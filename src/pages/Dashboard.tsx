@@ -78,7 +78,7 @@ export const Dashboard = () => {
                     <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: CLIENT_COLORS[idx % CLIENT_COLORS.length] }} />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-900 text-sm">{client.name}</p>
-                      <p className="text-xs text-slate-400">{session.startTime} · {session.duration}小時 · {cur} {(client.hourlyRate * session.duration).toLocaleString()}</p>
+                      <p className="text-xs text-slate-400">{session.startTime} · {t.hrs(session.duration)} · {cur} {(client.hourlyRate * session.duration).toLocaleString()}</p>
                     </div>
                     <Badge color={session.status === 'completed' ? 'green' : 'indigo'}>
                       {session.status === 'completed' ? t.done : t.upcoming}

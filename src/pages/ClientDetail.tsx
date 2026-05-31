@@ -96,7 +96,7 @@ export const ClientDetail = () => {
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{client.name}</h1>
           <p className="text-xs text-slate-400">{cur} {client.hourlyRate}{t.perHour}</p>
         </div>
-        <Link to={`/clients/${id}/edit`}><Button variant="secondary" size="sm">編輯</Button></Link>
+        <Link to={`/clients/${id}/edit`}><Button variant="secondary" size="sm">{t.edit}</Button></Link>
       </div>
 
       {/* Month selector */}
@@ -149,7 +149,7 @@ export const ClientDetail = () => {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t.sessionBreakdown}</h2>
-          <button onClick={openAddModal} className="text-sm text-[#635BFF] font-medium">+ 補堂</button>
+          <button onClick={openAddModal} className="text-sm text-[#635BFF] font-medium">{t.addAdhoc}</button>
         </div>
         {clientSessions.length === 0 ? (
           <Card><p className="text-sm text-slate-400 text-center py-4">{t.noSessionsThisMonth}</p></Card>
@@ -166,8 +166,8 @@ export const ClientDetail = () => {
                     {formatDisplayWithDay(session.date)}
                   </p>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {session.startTime} · {session.duration}小時 · {cur} {(client.hourlyRate * session.duration).toLocaleString()}
-                    {!session.isRecurring && <span className="ml-1 text-amber-500">補堂</span>}
+                    {session.startTime} · {t.hrs(session.duration)} · {cur} {(client.hourlyRate * session.duration).toLocaleString()}
+                    {!session.isRecurring && <span className="ml-1 text-amber-500">{t.adhocTag}</span>}
                   </p>
                 </div>
                 <Badge color={STATUS_COLORS[session.status]}>
@@ -184,7 +184,7 @@ export const ClientDetail = () => {
         {activeSession && (
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-slate-400 font-medium mb-2">課堂時長</p>
+              <p className="text-xs text-slate-400 font-medium mb-2">{t.sessionDuration}</p>
               <div className="flex gap-2">
                 {([1, 1.5, 2] as SessionDuration[]).map(d => (
                   <button
@@ -196,19 +196,19 @@ export const ClientDetail = () => {
                         : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                   >
-                    {d}小時
+                    {t.hrs(d)}
                   </button>
                 ))}
               </div>
               {editDuration && editDuration !== activeSession.duration && (
                 <p className="text-xs text-[#635BFF] mt-1">
-                  費用：{cur} {(client.hourlyRate * editDuration).toLocaleString()}
+                  {t.cost}：{cur} {(client.hourlyRate * editDuration).toLocaleString()}
                 </p>
               )}
             </div>
 
             <div>
-              <p className="text-xs text-slate-400 font-medium mb-2">更新狀態</p>
+              <p className="text-xs text-slate-400 font-medium mb-2">{t.updateStatus}</p>
               <div className="space-y-1.5">
                 {(['completed', 'cancelled', 'late_cancel', 'rescheduled'] as SessionStatus[]).map(status => (
                   <button
@@ -227,7 +227,7 @@ export const ClientDetail = () => {
                 className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium text-red-500"
                 onClick={() => { deleteSession(activeSession.id); setActiveSession(null) }}
               >
-                刪除課堂
+                {t.deleteSession}
               </button>
             </div>
           </div>
@@ -235,10 +235,10 @@ export const ClientDetail = () => {
       </Modal>
 
       {/* Add ad hoc session modal */}
-      <Modal open={addModal} onClose={() => setAddModal(false)} title="新增補堂">
+      <Modal open={addModal} onClose={() => setAddModal(false)} title={t.adhocLabel}>
         <div className="space-y-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">日期</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.dateLabel}</label>
             <input
               type="date"
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
@@ -248,7 +248,7 @@ export const ClientDetail = () => {
           </div>
           <div className="flex gap-3">
             <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">時間</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.timeLabel}</label>
               <input
                 type="time"
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
@@ -257,7 +257,7 @@ export const ClientDetail = () => {
               />
             </div>
             <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">時長</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.durationLabel}</label>
               <select
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
                 value={newDuration}
@@ -270,7 +270,7 @@ export const ClientDetail = () => {
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">狀態</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.statusLabel}</label>
             <div className="flex gap-2">
               {(['completed', 'scheduled'] as const).map(s => (
                 <button
@@ -282,17 +282,17 @@ export const ClientDetail = () => {
                       : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
                   }`}
                 >
-                  {s === 'completed' ? '已完成' : '待上'}
+                  {t.statusLabels[s]}
                 </button>
               ))}
             </div>
           </div>
           <div className="pt-1">
             <p className="text-xs text-slate-400 mb-3 text-center">
-              費用：{cur} {(client.hourlyRate * newDuration).toLocaleString()}
+              {t.cost}：{cur} {(client.hourlyRate * newDuration).toLocaleString()}
             </p>
             <Button fullWidth onClick={handleAddSession} disabled={!newDate || !newTime}>
-              確認新增補堂
+              {t.confirmAddAdhoc}
             </Button>
           </div>
         </div>
