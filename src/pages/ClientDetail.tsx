@@ -5,7 +5,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
-import { formatDisplay, formatDisplayWithDay, currentMonth, isInMonth, formatMonthYear } from '../lib/dates'
+import { formatDisplay, formatDisplayWithDay, currentMonth, isInMonth, formatMonthYear, todayStr } from '../lib/dates'
 import { t } from '../lib/i18n'
 import type { Session, SessionStatus, SessionDuration } from '../lib/types'
 
@@ -20,11 +20,16 @@ const STATUS_COLORS: Record<SessionStatus, 'green' | 'slate' | 'indigo' | 'orang
 export const ClientDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { clients, sessions, invoices, settings, createInvoice, updateSession, deleteSession } = useStoreCtx()
+  const { clients, sessions, invoices, settings, createInvoice, updateSession, deleteSession, addSession } = useStoreCtx()
   const client = clients.find(c => c.id === id)
   const [selectedMonth, setSelectedMonth] = useState(currentMonth())
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [editDuration, setEditDuration] = useState<SessionDuration | null>(null)
+  const [addModal, setAddModal] = useState(false)
+  const [newDate, setNewDate] = useState(todayStr())
+  const [newTime, setNewTime] = useState('10:00')
+  const [newDuration, setNewDuration] = useState<SessionDuration>(1)
+  const [newStatus, setNewStatus] = useState<'scheduled' | 'completed'>('completed')
 
   if (!client) return <div className="p-8 text-center text-slate-400">找不到客人。</div>
 
@@ -47,6 +52,27 @@ export const ClientDetail = () => {
     if (!activeSession) return
     updateSession(activeSession.id, { status, duration: editDuration ?? activeSession.duration })
     setActiveSession(null)
+  }
+
+  const openAddModal = () => {
+    setNewDate(todayStr())
+    setNewTime(client.schedule[0]?.time ?? '10:00')
+    setNewDuration(client.defaultDuration ?? 1)
+    setNewStatus('completed')
+    setAddModal(true)
+  }
+
+  const handleAddSession = () => {
+    addSession({
+      clientId: id!,
+      date: newDate,
+      startTime: newTime,
+      duration: newDuration,
+      status: newStatus,
+      notes: '',
+      isRecurring: false,
+    })
+    setAddModal(false)
   }
 
   const monthOptions = () => {
@@ -118,7 +144,10 @@ export const ClientDetail = () => {
       </Card>
 
       <div>
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">{t.sessionBreakdown}</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t.sessionBreakdown}</h2>
+          <button onClick={openAddModal} className="text-sm text-[#635BFF] font-medium">+ 補堂</button>
+        </div>
         {clientSessions.length === 0 ? (
           <Card><p className="text-sm text-slate-400 text-center py-4">{t.noSessionsThisMonth}</p></Card>
         ) : (
@@ -133,7 +162,10 @@ export const ClientDetail = () => {
                   <p className={`text-sm font-medium ${session.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-900 dark:text-slate-100'}`}>
                     {formatDisplayWithDay(session.date)}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">{session.startTime} · {session.duration}小時 · {cur} {(client.hourlyRate * session.duration).toLocaleString()}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {session.startTime} · {session.duration}小時 · {cur} {(client.hourlyRate * session.duration).toLocaleString()}
+                    {!session.isRecurring && <span className="ml-1 text-amber-500">補堂</span>}
+                  </p>
                 </div>
                 <Badge color={STATUS_COLORS[session.status]}>
                   {t.statusLabels[session.status]}
@@ -196,6 +228,69 @@ export const ClientDetail = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal open={addModal} onClose={() => setAddModal(false)} title="新增補堂">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">日期</label>
+            <input
+              type="date"
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
+              value={newDate}
+              onChange={e => setNewDate(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">時間</label>
+              <input
+                type="time"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
+                value={newTime}
+                onChange={e => setNewTime(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">時長</label>
+              <select
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
+                value={newDuration}
+                onChange={e => setNewDuration(Number(e.target.value) as SessionDuration)}
+              >
+                <option value={1}>{t.oneHour}</option>
+                <option value={1.5}>{t.oneHalfHour}</option>
+                <option value={2}>{t.twoHours}</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">狀態</label>
+            <div className="flex gap-2">
+              {(['completed', 'scheduled'] as const).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setNewStatus(s)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                    newStatus === s
+                      ? 'bg-[#635BFF] text-white border-[#635BFF]'
+                      : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {s === 'completed' ? '已完成' : '待上'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="pt-1">
+            <p className="text-xs text-slate-400 mb-3 text-center">
+              費用：{cur} {(client.hourlyRate * newDuration).toLocaleString()}
+            </p>
+            <Button fullWidth onClick={handleAddSession} disabled={!newDate || !newTime}>
+              確認新增補堂
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )
