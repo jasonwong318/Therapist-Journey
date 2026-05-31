@@ -17,6 +17,8 @@ export const InvoiceDetail = () => {
 
   const client = clients.find(c => c.id === invoice.clientId)!
   const invSessions = sessions.filter(s => invoice.sessionIds.includes(s.id)).sort((a, b) => a.date.localeCompare(b.date))
+  const billableSessions = invSessions.filter(s => s.status === 'completed' || s.status === 'late_cancel')
+  const displayTotal = billableSessions.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
   const cur = settings.currency
 
   const handleDownload = () => generateInvoicePDF(invoice, client, invSessions, settings)
@@ -28,9 +30,14 @@ export const InvoiceDetail = () => {
       `${formatMonthYear(invoice.month)} 發票`,
       `發票號碼：${invoice.invoiceNumber}`,
       ``,
-      ...invSessions.map(s => `${formatDisplay(s.date)}  ${t.hrs(s.duration)}  ${cur}${(client.hourlyRate * s.duration).toLocaleString()}`),
+      ...billableSessions.map(s => {
+        const [h, m] = s.startTime.split(':').map(Number)
+        const endMins = h * 60 + m + s.duration * 60
+        const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
+        return `${formatDisplay(s.date)}  ${s.startTime}–${endTime}  ${cur}${(client.hourlyRate * s.duration).toLocaleString()}`
+      }),
       ``,
-      `總計：${cur} ${invoice.totalAmount.toLocaleString()}`,
+      `總計：${cur} ${displayTotal.toLocaleString()}`,
       ``,
       settings.paymentInfo ? `付款資料：\n${settings.paymentInfo}` : '',
     ].filter(Boolean).join('\n')
@@ -59,26 +66,34 @@ export const InvoiceDetail = () => {
       {/* Amount card */}
       <Card className="!p-5 bg-gradient-to-br from-[#635BFF] to-[#4F46E5] !border-0">
         <p className="text-indigo-200 text-sm">{t.totalAmount}</p>
-        <p className="text-4xl font-bold text-white mt-1">{cur} {invoice.totalAmount.toLocaleString()}</p>
-        <p className="text-indigo-200 text-xs mt-1">{invSessions.length} {t.sessions}</p>
+        <p className="text-4xl font-bold text-white mt-1">{cur} {displayTotal.toLocaleString()}</p>
+        <p className="text-indigo-200 text-xs mt-1">{billableSessions.length} {t.sessions}</p>
       </Card>
 
       {/* Sessions */}
       <div>
         <h2 className="text-sm font-semibold text-slate-900 mb-3">{t.sessionBreakdown}</h2>
         <Card padding={false}>
-          {invSessions.map((s, i) => (
-            <div key={s.id} className={`flex items-center justify-between px-4 py-3.5 ${i < invSessions.length - 1 ? 'border-b border-slate-50' : ''}`}>
-              <div>
-                <p className="text-sm font-medium text-slate-900">{formatDisplay(s.date)}</p>
-                <p className="text-xs text-slate-400">{s.startTime} · {t.hrs(s.duration)}</p>
+          {invSessions.map((s, i) => {
+            const [h, m] = s.startTime.split(':').map(Number)
+            const endMins = h * 60 + m + s.duration * 60
+            const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
+            const isBillable = s.status === 'completed' || s.status === 'late_cancel'
+            return (
+              <div key={s.id} className={`flex items-center justify-between px-4 py-3.5 ${i < invSessions.length - 1 ? 'border-b border-slate-50' : ''}`}>
+                <div>
+                  <p className={`text-sm font-medium ${isBillable ? 'text-slate-900' : 'text-slate-400 line-through'}`}>{formatDisplay(s.date)}</p>
+                  <p className="text-xs text-slate-400">{s.startTime}–{endTime}</p>
+                </div>
+                <p className={`text-sm font-semibold ${isBillable ? 'text-slate-900' : 'text-slate-300'}`}>
+                  {isBillable ? `${cur} ${(client.hourlyRate * s.duration).toLocaleString()}` : t.statusLabels[s.status]}
+                </p>
               </div>
-              <p className="text-sm font-semibold text-slate-900">{cur} {(client.hourlyRate * s.duration).toLocaleString()}</p>
-            </div>
-          ))}
+            )
+          })}
           <div className="flex items-center justify-between px-4 py-3.5 bg-slate-50 rounded-b-2xl">
             <p className="text-sm font-bold text-slate-900">{t.total}</p>
-            <p className="text-sm font-bold text-[#635BFF]">{cur} {invoice.totalAmount.toLocaleString()}</p>
+            <p className="text-sm font-bold text-[#635BFF]">{cur} {displayTotal.toLocaleString()}</p>
           </div>
         </Card>
       </div>

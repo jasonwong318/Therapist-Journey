@@ -30,7 +30,7 @@ const HK_HOLIDAYS_BILINGUAL: Record<string, HolidayEntry> = {
   '2026-04-07': { zh: '復活節星期一', en: 'Easter Monday' },
   '2026-05-01': { zh: '勞動節', en: 'Labour Day' },
   '2026-05-24': { zh: '佛誕', en: "Buddha's Birthday" },
-  '2026-06-20': { zh: '端午節', en: 'Tuen Ng Festival' },
+  '2026-06-19': { zh: '端午節', en: 'Tuen Ng Festival' },
   '2026-07-01': { zh: '香港回歸紀念日', en: 'HKSAR Establishment Day' },
   '2026-09-26': { zh: '中秋節翌日', en: 'Day after Mid-Autumn' },
   '2026-10-01': { zh: '國慶日', en: 'National Day' },
