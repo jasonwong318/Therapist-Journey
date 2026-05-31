@@ -141,7 +141,23 @@ export const useStore = () => {
 
   const updateSession = useCallback((id: string, updates: Partial<Session>) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s))
-  }, [setSessions])
+    if ('status' in updates) {
+      const session = sessions.find(s => s.id === id)
+      if (session?.invoiceId) {
+        const client = clients.find(c => c.id === session.clientId)
+        if (client) {
+          const invoiceId = session.invoiceId
+          setInvoices(prevInv => prevInv.map(inv => {
+            if (inv.id !== invoiceId) return inv
+            const updatedSessions = sessions.map(s => s.id === id ? { ...s, ...updates } : s)
+            const billable = updatedSessions.filter(s => inv.sessionIds.includes(s.id) && (s.status === 'completed' || s.status === 'late_cancel'))
+            const totalAmount = billable.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+            return { ...inv, totalAmount }
+          }))
+        }
+      }
+    }
+  }, [setSessions, sessions, clients, setInvoices])
 
   const addSession = useCallback((session: Omit<Session, 'id'>) => {
     const s: Session = { ...session, id: nanoid() }
