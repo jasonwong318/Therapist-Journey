@@ -6,6 +6,8 @@ export interface ScheduleSlot {
   dayOfWeek: number // 0=Sun, 1=Mon, ..., 6=Sat
   time: string // "HH:MM"
   duration: SessionDuration
+  startDate?: string // YYYY-MM-DD, generate sessions from this date onwards
+  endDate?: string   // YYYY-MM-DD, stop generating after this date
 }
 
 export interface Client {

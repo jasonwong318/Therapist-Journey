@@ -25,6 +25,8 @@ export const ClientDetail = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth())
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [editDuration, setEditDuration] = useState<SessionDuration | null>(null)
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
   const [addModal, setAddModal] = useState(false)
   const [newDate, setNewDate] = useState(todayStr())
   const [newTime, setNewTime] = useState('10:00')
@@ -46,11 +48,18 @@ export const ClientDetail = () => {
   const openSession = (session: Session) => {
     setActiveSession(session)
     setEditDuration(session.duration)
+    setEditDate(session.date)
+    setEditTime(session.startTime)
   }
 
   const handleSaveSession = (status: SessionStatus) => {
     if (!activeSession) return
-    updateSession(activeSession.id, { status, duration: editDuration ?? activeSession.duration })
+    const updates: Partial<Session> = { status, duration: editDuration ?? activeSession.duration }
+    if (!activeSession.isRecurring) {
+      updates.date = editDate || activeSession.date
+      updates.startTime = editTime || activeSession.startTime
+    }
+    updateSession(activeSession.id, updates)
     setActiveSession(null)
   }
 
@@ -183,6 +192,28 @@ export const ClientDetail = () => {
       <Modal open={!!activeSession} onClose={() => setActiveSession(null)} title={activeSession ? formatDisplayWithDay(activeSession.date) : ''}>
         {activeSession && (
           <div className="space-y-4">
+            {!activeSession.isRecurring && (
+              <div className="flex gap-3">
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <label className="text-xs text-slate-400 font-medium">{t.dateLabel}</label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
+                    value={editDate}
+                    onChange={e => setEditDate(e.target.value)}
+                  />
+                </div>
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <label className="text-xs text-slate-400 font-medium">{t.timeLabel}</label>
+                  <input
+                    type="time"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
+                    value={editTime}
+                    onChange={e => setEditTime(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
             <div>
               <p className="text-xs text-slate-400 font-medium mb-2">{t.sessionDuration}</p>
               <div className="flex gap-2">

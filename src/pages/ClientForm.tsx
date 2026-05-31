@@ -18,7 +18,7 @@ export const ClientForm = () => {
   const [notes, setNotes] = useState(existing?.notes ?? '')
   const [schedule, setSchedule] = useState<ScheduleSlot[]>(existing?.schedule ?? [])
 
-  const addSlot = () => setSchedule(prev => [...prev, { dayOfWeek: 1, time: '10:00', duration: defaultDuration }])
+  const addSlot = () => setSchedule(prev => [...prev, { dayOfWeek: 1, time: '10:00', duration: defaultDuration, startDate: '', endDate: '' }])
   const removeSlot = (i: number) => setSchedule(prev => prev.filter((_, idx) => idx !== i))
   const updateSlot = (i: number, patch: Partial<ScheduleSlot>) => setSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s))
 
@@ -89,6 +89,10 @@ export const ClientForm = () => {
                   </svg>
                 </button>
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input label={t.slotStartDate} type="date" value={slot.startDate ?? ''} onChange={e => updateSlot(i, { startDate: e.target.value || undefined })} />
+                <Input label={t.slotEndDate} type="date" value={slot.endDate ?? ''} onChange={e => updateSlot(i, { endDate: e.target.value || undefined })} />
+              </div>
             </div>
           ))}
         </div>
@@ -104,7 +108,7 @@ export const ClientForm = () => {
             updateClient(existing.id, { archivedAt: undefined })
             navigate(`/clients/${existing.id}`)
           }}>
-            取消存檔（重新啟用）
+            {t.unarchiveClient}
           </Button>
         ) : (
           <Button fullWidth variant="danger" onClick={() => {

@@ -18,6 +18,8 @@ export const generateSessionsForMonth = (
       const dates = recurringDatesInMonth(slot.dayOfWeek, year, month)
       for (const date of dates) {
         const dateStr = toDateStr(date)
+        if (slot.startDate && dateStr < slot.startDate) continue
+        if (slot.endDate && dateStr > slot.endDate) continue
         if (holidayDates.has(dateStr)) continue
         const alreadyExists = existingSessions.some(
           s => s.clientId === client.id && s.date === dateStr && s.startTime === slot.time && s.isRecurring

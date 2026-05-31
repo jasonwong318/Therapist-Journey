@@ -27,6 +27,7 @@ type Translations = {
   data: string; exportBackup: string; importBackup: string; dataLocal: string
   holidays: string; manageHolidays: string; noHolidays: string; removeHoliday: string; addHolidayHint: string
   edit: string; adhocTag: string; cost: string; dateLabel: string; timeLabel: string; durationLabel: string; statusLabel: string; hrs: (h: number) => string
+  slotStartDate: string; slotEndDate: string; noEndDate: string
 }
 
 const zh: Translations = {
@@ -69,6 +70,7 @@ const zh: Translations = {
   manageHolidays: '管理假期，自動排課將跳過這些日子。', noHolidays: '未設假期。',
   removeHoliday: '移除', addHolidayHint: '從日曆頁點擊日期可新增假期',
   edit: '編輯', adhocTag: '補堂', cost: '費用', dateLabel: '日期', timeLabel: '時間', durationLabel: '時長', statusLabel: '狀態', hrs: (h) => `${h}小時`,
+  slotStartDate: '開始日期（選填）', slotEndDate: '結束日期（選填）', noEndDate: '不設結束日期',
 }
 
 const en: Translations = {
@@ -111,6 +113,7 @@ const en: Translations = {
   manageHolidays: 'Manage holidays. Auto-scheduling skips these days.', noHolidays: 'No holidays set.',
   removeHoliday: 'Remove', addHolidayHint: 'Tap a date in Calendar to add a holiday',
   edit: 'Edit', adhocTag: 'Makeup', cost: 'Fee', dateLabel: 'Date', timeLabel: 'Time', durationLabel: 'Duration', statusLabel: 'Status', hrs: (h) => `${h}h`,
+  slotStartDate: 'Start Date (optional)', slotEndDate: 'End Date (optional)', noEndDate: 'No end date',
 }
 
 export type Lang = 'zh' | 'en'
