@@ -28,6 +28,7 @@ type Translations = {
   holidays: string; manageHolidays: string; noHolidays: string; removeHoliday: string; addHolidayHint: string
   edit: string; adhocTag: string; cost: string; dateLabel: string; timeLabel: string; durationLabel: string; statusLabel: string; hrs: (h: number) => string
   slotStartDate: string; slotEndDate: string; noEndDate: string
+  updateInvoice: string; voidInvoice: string
 }
 
 const zh: Translations = {
@@ -71,6 +72,7 @@ const zh: Translations = {
   removeHoliday: '移除', addHolidayHint: '從日曆頁點擊日期可新增假期',
   edit: '編輯', adhocTag: '補堂', cost: '費用', dateLabel: '日期', timeLabel: '時間', durationLabel: '時長', statusLabel: '狀態', hrs: (h) => `${h}小時`,
   slotStartDate: '開始日期（選填）', slotEndDate: '結束日期（選填）', noEndDate: '不設結束日期',
+  updateInvoice: '加入發票', voidInvoice: '刪除發票',
 }
 
 const en: Translations = {
@@ -114,6 +116,7 @@ const en: Translations = {
   removeHoliday: 'Remove', addHolidayHint: 'Tap a date in Calendar to add a holiday',
   edit: 'Edit', adhocTag: 'Makeup', cost: 'Fee', dateLabel: 'Date', timeLabel: 'Time', durationLabel: 'Duration', statusLabel: 'Status', hrs: (h) => `${h}h`,
   slotStartDate: 'Start Date (optional)', slotEndDate: 'End Date (optional)', noEndDate: 'No end date',
+  updateInvoice: 'Add to Invoice', voidInvoice: 'Delete Invoice',
 }
 
 export type Lang = 'zh' | 'en'

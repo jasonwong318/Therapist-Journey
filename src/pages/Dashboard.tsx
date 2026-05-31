@@ -11,7 +11,8 @@ const CLIENT_COLORS = ['#635BFF', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#
 const monthOptions = () => {
   const now = new Date()
   const options = []
-  for (let i = -5; i <= 3; i++) {
+  // future on left (+3 to -5), same order as ClientDetail
+  for (let i = 3; i >= -5; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
     const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     options.push({ value: val, label: formatMonthYear(val) })
