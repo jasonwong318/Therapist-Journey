@@ -18,7 +18,7 @@ export const ClientForm = () => {
   const [notes, setNotes] = useState(existing?.notes ?? '')
   const [schedule, setSchedule] = useState<ScheduleSlot[]>(existing?.schedule ?? [])
 
-  const addSlot = () => setSchedule(prev => [...prev, { dayOfWeek: 1, time: '10:00', duration: defaultDuration }])
+  const addSlot = () => setSchedule(prev => [...prev, { dayOfWeek: 1, time: '10:00', duration: defaultDuration, startDate: '', endDate: '' }])
   const removeSlot = (i: number) => setSchedule(prev => prev.filter((_, idx) => idx !== i))
   const updateSlot = (i: number, patch: Partial<ScheduleSlot>) => setSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s))
 
@@ -37,15 +37,12 @@ export const ClientForm = () => {
   return (
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-xl">
           <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex-1">{existing ? t.editClient : t.newClient}</h1>
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 px-2 py-1">
-          取消
-        </button>
+        <h1 className="text-xl font-bold text-slate-900">{existing ? t.editClient : t.newClient}</h1>
       </div>
 
       <div className="space-y-4">
@@ -61,17 +58,17 @@ export const ClientForm = () => {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t.weeklySchedule}</h2>
+          <h2 className="text-sm font-semibold text-slate-900">{t.weeklySchedule}</h2>
           <button onClick={addSlot} className="text-sm text-[#635BFF] font-medium">{t.addSlot}</button>
         </div>
         {schedule.length === 0 && (
-          <p className="text-sm text-slate-400 text-center py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+          <p className="text-sm text-slate-400 text-center py-4 border-2 border-dashed border-slate-200 rounded-xl">
             {t.noSlots}
           </p>
         )}
         <div className="space-y-3">
           {schedule.map((slot, i) => (
-            <div key={i} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-3">
+            <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <Select label={t.day} value={slot.dayOfWeek} onChange={e => updateSlot(i, { dayOfWeek: Number(e.target.value) })}>
                   {t.daysLong.map((d, di) => <option key={di} value={di}>{d}</option>)}
@@ -86,11 +83,15 @@ export const ClientForm = () => {
                     <option value={2}>{t.twoHours}</option>
                   </Select>
                 </div>
-                <button onClick={() => removeSlot(i)} className="mt-5 p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                <button onClick={() => removeSlot(i)} className="mt-5 p-2 text-red-400 hover:bg-red-50 rounded-lg">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input label={t.slotStartDate} type="date" value={slot.startDate ?? ''} onChange={e => updateSlot(i, { startDate: e.target.value || undefined })} />
+                <Input label={t.slotEndDate} type="date" value={slot.endDate ?? ''} onChange={e => updateSlot(i, { endDate: e.target.value || undefined })} />
               </div>
             </div>
           ))}
@@ -101,17 +102,13 @@ export const ClientForm = () => {
         {existing ? t.saveChanges : t.addClient}
       </Button>
 
-      <Button fullWidth variant="secondary" onClick={() => navigate(-1)}>
-        取消
-      </Button>
-
       {existing && (
         existing.archivedAt ? (
           <Button fullWidth variant="secondary" onClick={() => {
             updateClient(existing.id, { archivedAt: undefined })
             navigate(`/clients/${existing.id}`)
           }}>
-            取消存檔（重新啟用）
+            {t.unarchiveClient}
           </Button>
         ) : (
           <Button fullWidth variant="danger" onClick={() => {
