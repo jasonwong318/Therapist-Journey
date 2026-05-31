@@ -99,12 +99,21 @@ export const ClientForm = () => {
       </Button>
 
       {existing && (
-        <Button fullWidth variant="danger" onClick={() => {
-          updateClient(existing.id, { archivedAt: new Date().toISOString() })
-          navigate('/clients')
-        }}>
-          {t.archiveClient}
-        </Button>
+        existing.archivedAt ? (
+          <Button fullWidth variant="secondary" onClick={() => {
+            updateClient(existing.id, { archivedAt: undefined })
+            navigate(`/clients/${existing.id}`)
+          }}>
+            取消存檔（重新啟用）
+          </Button>
+        ) : (
+          <Button fullWidth variant="danger" onClick={() => {
+            updateClient(existing.id, { archivedAt: new Date().toISOString() })
+            navigate('/clients')
+          }}>
+            {t.archiveClient}
+          </Button>
+        )
       )}
     </div>
   )

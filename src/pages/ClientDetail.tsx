@@ -5,7 +5,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
-import { formatDisplay, currentMonth, isInMonth, formatMonthYear } from '../lib/dates'
+import { formatDisplay, formatDisplayWithDay, currentMonth, isInMonth, formatMonthYear } from '../lib/dates'
 import { t } from '../lib/i18n'
 import type { Session, SessionStatus } from '../lib/types'
 
@@ -127,8 +127,8 @@ export const ClientDetail = () => {
                 onClick={() => setActiveSession(session)}
               >
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${session.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-900'}`}>
-                    {formatDisplay(session.date)}
+                  <p className={`text-sm font-medium ${session.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                    {formatDisplayWithDay(session.date)}
                   </p>
                   <p className="text-xs text-slate-400 mt-0.5">{session.startTime} · {session.duration}小時 · {cur} {(client.hourlyRate * session.duration).toLocaleString()}</p>
                 </div>

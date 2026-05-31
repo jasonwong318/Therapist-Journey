@@ -4,13 +4,14 @@ import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { Button } from '../components/ui/Button'
 import { calendarWeeks, toDateStr, formatDisplay, getMonth } from '../lib/dates'
+import { HK_HOLIDAYS } from '../lib/hkHolidays'
 import type { Session, SessionStatus, SessionDuration } from '../lib/types'
 import { t } from '../lib/i18n'
 
 const CLIENT_COLORS = ['#635BFF', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
 
 export const Calendar = () => {
-  const { clients, sessions, holidays, updateSession, addSession, addHoliday, removeHoliday } = useStoreCtx()
+  const { clients, sessions, holidays, updateSession, addSession, addHoliday, removeHoliday, ensureSessionsForMonth } = useStoreCtx()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -29,13 +30,30 @@ export const Calendar = () => {
     dayMap[s.date].push(s)
   })
 
-  const holidayMap = new Map(holidays.map(h => [h.date, h]))
+  // Merge user-marked holidays + HK statutory holidays
+  const userHolidayMap = new Map(holidays.map(h => [h.date, h.label || t.isHoliday]))
+  const getHolidayLabel = (dateStr: string): string | null => {
+    if (userHolidayMap.has(dateStr)) return userHolidayMap.get(dateStr)!
+    if (HK_HOLIDAYS[dateStr]) return HK_HOLIDAYS[dateStr]
+    return null
+  }
+  const isUserHoliday = (dateStr: string) => userHolidayMap.has(dateStr)
 
-  const prevMonth = () => { if (month === 0) { setYear(y => y - 1); setMonth(11) } else setMonth(m => m - 1) }
-  const nextMonth = () => { if (month === 11) { setYear(y => y + 1); setMonth(0) } else setMonth(m => m + 1) }
+  const prevMonth = () => {
+    let y = year, m = month
+    if (m === 0) { y -= 1; m = 11 } else m -= 1
+    setYear(y); setMonth(m)
+  }
+  const nextMonth = () => {
+    let y = year, m = month
+    if (m === 11) { y += 1; m = 0 } else m += 1
+    setYear(y); setMonth(m)
+    ensureSessionsForMonth(y, m)
+  }
 
   const selectedSessions = selectedDate ? (dayMap[selectedDate] ?? []).sort((a, b) => a.startTime.localeCompare(b.startTime)) : []
-  const selectedHoliday = selectedDate ? holidayMap.get(selectedDate) : undefined
+  const selectedHolidayLabel = selectedDate ? getHolidayLabel(selectedDate) : null
+  const selectedIsUserHoliday = selectedDate ? isUserHoliday(selectedDate) : false
 
   const getClientColor = (clientId: string) => {
     const idx = clients.findIndex(c => c.id === clientId)
@@ -45,12 +63,12 @@ export const Calendar = () => {
   return (
     <div className="px-4 pt-6 pb-28 max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-bold text-slate-900">{t.monthNames[month]} {year}</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t.monthNames[month]} {year}</h1>
         <div className="flex gap-2">
-          <button onClick={prevMonth} className="p-2 hover:bg-slate-100 rounded-xl">
+          <button onClick={prevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
             <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </button>
-          <button onClick={nextMonth} className="p-2 hover:bg-slate-100 rounded-xl">
+          <button onClick={nextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
             <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
           </button>
         </div>
@@ -73,7 +91,8 @@ export const Calendar = () => {
               const isToday = dateStr === today
               const isSelected = dateStr === selectedDate
               const daySessions = dayMap[dateStr] ?? []
-              const isHol = holidayMap.has(dateStr)
+              const holLabel = getHolidayLabel(dateStr)
+              const isHol = !!holLabel && isCurrentMonth
               const hasContent = (daySessions.length > 0 || isHol) && isCurrentMonth
 
               return (
@@ -82,9 +101,9 @@ export const Calendar = () => {
                   onClick={() => isCurrentMonth && setSelectedDate(isSelected ? null : dateStr)}
                   className={`aspect-square flex flex-col items-center justify-start pt-1 rounded-xl relative transition-colors ${
                     !isCurrentMonth ? 'opacity-20 cursor-default' : ''
-                  } ${isSelected ? 'bg-[#635BFF] text-white' : isToday ? 'bg-indigo-50 text-[#635BFF]' : isHol && isCurrentMonth ? 'bg-red-50' : 'hover:bg-slate-100'}`}
+                  } ${isSelected ? 'bg-[#635BFF] text-white' : isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 text-[#635BFF]' : isHol ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                 >
-                  <span className={`text-sm font-medium ${isSelected ? 'text-white' : isToday ? 'text-[#635BFF]' : isHol && isCurrentMonth ? 'text-red-400' : 'text-slate-700'}`}>
+                  <span className={`text-sm font-medium ${isSelected ? 'text-white' : isToday ? 'text-[#635BFF]' : isHol ? 'text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
                     {day.getDate()}
                   </span>
                   {hasContent && (
@@ -106,17 +125,17 @@ export const Calendar = () => {
       {selectedDate && (
         <div className="mt-5">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-slate-900">{formatDisplay(selectedDate)}</h2>
-              {selectedHoliday && (
-                <span className="text-xs bg-red-50 text-red-400 px-2 py-0.5 rounded-full font-medium">
-                  {selectedHoliday.label || t.isHoliday}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{formatDisplay(selectedDate)}</h2>
+              {selectedHolidayLabel && (
+                <span className="text-xs bg-red-50 dark:bg-red-900/30 text-red-400 px-2 py-0.5 rounded-full font-medium">
+                  {selectedHolidayLabel}
                 </span>
               )}
             </div>
             <div className="flex gap-2">
-              {selectedHoliday ? (
-                <button onClick={() => { removeHoliday(selectedDate); }} className="text-xs text-red-400 font-medium">{t.cancelHoliday}</button>
+              {selectedIsUserHoliday ? (
+                <button onClick={() => removeHoliday(selectedDate)} className="text-xs text-red-400 font-medium">{t.cancelHoliday}</button>
               ) : (
                 <button onClick={() => { setHolidayLabel(''); setHolidayModal(true) }} className="text-xs text-slate-400 font-medium">{t.addHoliday}</button>
               )}
@@ -124,7 +143,7 @@ export const Calendar = () => {
             </div>
           </div>
 
-          {selectedSessions.length === 0 && !selectedHoliday ? (
+          {selectedSessions.length === 0 && !selectedHolidayLabel ? (
             <Card><p className="text-sm text-slate-400 text-center py-3">{t.noSessionsDay}</p></Card>
           ) : (
             <div className="space-y-2">
@@ -135,11 +154,11 @@ export const Calendar = () => {
                   <Card key={s.id} className="!p-4 flex items-center gap-3">
                     <div className="w-2 h-12 rounded-full flex-shrink-0" style={{ backgroundColor: getClientColor(s.clientId) }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{client.name}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{client.name}</p>
                       <p className="text-xs text-slate-400">{s.startTime} · {s.duration}小時</p>
                     </div>
                     <select
-                      className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600"
+                      className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                       value={s.status}
                       onChange={e => updateSession(s.id, { status: e.target.value as SessionStatus })}
                     >
@@ -161,20 +180,20 @@ export const Calendar = () => {
       <Modal open={addSessionModal} onClose={() => setAddSessionModal(false)} title={selectedDate ? t.addSessionTitle(formatDisplay(selectedDate)) : ''}>
         <div className="space-y-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700">{t.clients}</label>
-            <select className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white" value={newSession.clientId} onChange={e => setNewSession(s => ({ ...s, clientId: e.target.value }))}>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.clients}</label>
+            <select className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100" value={newSession.clientId} onChange={e => setNewSession(s => ({ ...s, clientId: e.target.value }))}>
               <option value="">{t.selectClient}</option>
               {clients.filter(c => !c.archivedAt).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="flex gap-3">
             <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-700">{t.time}</label>
-              <input type="time" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white" value={newSession.startTime} onChange={e => setNewSession(s => ({ ...s, startTime: e.target.value }))} />
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.time}</label>
+              <input type="time" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100" value={newSession.startTime} onChange={e => setNewSession(s => ({ ...s, startTime: e.target.value }))} />
             </div>
             <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-700">{t.duration}</label>
-              <select className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white" value={newSession.duration} onChange={e => setNewSession(s => ({ ...s, duration: Number(e.target.value) as SessionDuration }))}>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.duration}</label>
+              <select className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100" value={newSession.duration} onChange={e => setNewSession(s => ({ ...s, duration: Number(e.target.value) as SessionDuration }))}>
                 <option value={1}>{t.oneHour}</option>
                 <option value={1.5}>{t.oneHalfHour}</option>
                 <option value={2}>{t.twoHours}</option>
@@ -195,9 +214,9 @@ export const Calendar = () => {
       <Modal open={holidayModal} onClose={() => setHolidayModal(false)} title={t.markHoliday}>
         <div className="space-y-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-700">{t.holidayLabel}</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.holidayLabel}</label>
             <input
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100"
               placeholder={t.holidayPlaceholder}
               value={holidayLabel}
               onChange={e => setHolidayLabel(e.target.value)}

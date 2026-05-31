@@ -10,6 +10,12 @@ export const toDateStr = (d: Date) => format(d, 'yyyy-MM-dd')
 export const parseDate = (s: string) => parseISO(s)
 export const formatDisplay = (s: string) => format(parseISO(s), 'MMM d, yyyy')
 export const formatMonthYear = (s: string) => format(parseISO(s + '-01'), 'MMMM yyyy')
+
+const DAY_NAMES_ZH = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+export const formatDisplayWithDay = (s: string) => {
+  const d = parseISO(s)
+  return `${DAY_NAMES_ZH[getDay(d)]} ${format(d, 'M月d日')}`
+}
 export const todayStr = () => toDateStr(new Date())
 export const currentMonth = () => format(new Date(), 'yyyy-MM')
 
