@@ -33,7 +33,7 @@ const links = [
 ]
 
 export const BottomNav = () => (
-  <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 safe-bottom">
+  <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 safe-bottom">
     <div className="flex justify-around items-center pt-2 pb-1 max-w-lg mx-auto">
       {links.map(({ to, label, icon }) => (
         <NavLink
@@ -42,7 +42,7 @@ export const BottomNav = () => (
           end={to === '/'}
           className={({ isActive }) =>
             `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${
-              isActive ? 'text-[#635BFF]' : 'text-slate-400'
+              isActive ? 'text-[#635BFF]' : 'text-slate-400 dark:text-slate-500'
             }`
           }
         >

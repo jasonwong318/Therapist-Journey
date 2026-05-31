@@ -26,7 +26,11 @@ const AppShell = ({ dark, toggleDark }: { dark: boolean; toggleDark: () => void 
           <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{t.appName}</span>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={toggleDark} className="p-2 rounded-xl transition-colors text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button
+            onClick={toggleDark}
+            className="p-2 rounded-xl transition-colors text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title={dark ? '切換淺色模式' : '切換深色模式'}
+          >
             {dark ? (
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -46,6 +50,7 @@ const AppShell = ({ dark, toggleDark }: { dark: boolean; toggleDark: () => void 
         </div>
       </div>
     </div>
+
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/calendar" element={<Calendar />} />
@@ -57,6 +62,7 @@ const AppShell = ({ dark, toggleDark }: { dark: boolean; toggleDark: () => void 
       <Route path="/invoices/:id" element={<InvoiceDetail />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
+
     <BottomNav />
   </div>
 )
