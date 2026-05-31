@@ -11,9 +11,10 @@ import { Calendar } from './pages/Calendar'
 import { Invoices } from './pages/Invoices'
 import { InvoiceDetail } from './pages/InvoiceDetail'
 import { Settings } from './pages/Settings'
-import { t } from './lib/i18n'
+import { t, setLang, getLang, type Lang } from './lib/i18n'
+import { useState } from 'react'
 
-const AppShell = ({ dark, toggleDark }: { dark: boolean; toggleDark: () => void }) => (
+const AppShell = ({ dark, toggleDark, toggleLang }: { dark: boolean; toggleDark: () => void; lang: Lang; toggleLang: () => void }) => (
   <div className="min-h-svh bg-[#F6F9FC] dark:bg-[#0f0f14]">
     <div className="sticky top-0 z-30 bg-[#F6F9FC]/80 dark:bg-[#0f0f14]/80 backdrop-blur-md safe-top border-b border-slate-100/60 dark:border-slate-800">
       <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
@@ -27,8 +28,15 @@ const AppShell = ({ dark, toggleDark }: { dark: boolean; toggleDark: () => void 
         </div>
         <div className="flex items-center gap-1">
           <button
+            onClick={toggleLang}
+            className="px-2 py-1 rounded-xl text-xs font-semibold transition-colors text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            {getLang() === 'zh' ? 'EN' : '中'}
+          </button>
+          <button
             onClick={toggleDark}
-            className="p-2 rounded-xl transition-colors text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-2 rounded-xl transition-colors text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title={dark ? '切換淺色模式' : '切換深色模式'}
           >
             {dark ? (
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -69,10 +77,16 @@ const AppShell = ({ dark, toggleDark }: { dark: boolean; toggleDark: () => void 
 function App() {
   const store = useStore()
   const { dark, toggleDark } = useDarkMode()
+  const [lang, setLangState] = useState<Lang>(getLang())
+  const toggleLang = () => {
+    const next: Lang = lang === 'zh' ? 'en' : 'zh'
+    setLang(next)
+    setLangState(next)
+  }
   return (
     <StoreContext.Provider value={store}>
       <BrowserRouter basename="/Therapist-Journey">
-        <AppShell dark={dark} toggleDark={toggleDark} />
+        <AppShell dark={dark} toggleDark={toggleDark} lang={lang} toggleLang={toggleLang} />
       </BrowserRouter>
     </StoreContext.Provider>
   )

@@ -12,8 +12,11 @@ export const formatDisplay = (s: string) => format(parseISO(s), 'MMM d, yyyy')
 export const formatMonthYear = (s: string) => format(parseISO(s + '-01'), 'MMMM yyyy')
 
 const DAY_NAMES_ZH = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+const DAY_NAMES_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 export const formatDisplayWithDay = (s: string) => {
   const d = parseISO(s)
+  const lang = localStorage.getItem('tt_lang') ?? 'zh'
+  if (lang === 'en') return `${DAY_NAMES_EN[getDay(d)]}, ${format(d, 'MMM d')}`
   return `${DAY_NAMES_ZH[getDay(d)]} ${format(d, 'M月d日')}`
 }
 export const todayStr = () => toDateStr(new Date())
