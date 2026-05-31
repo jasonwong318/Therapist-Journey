@@ -26,6 +26,7 @@ export const ClientDetail = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth())
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [editDuration, setEditDuration] = useState<SessionDuration | null>(null)
+  const [editStatus, setEditStatus] = useState<SessionStatus | null>(null)
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
   const [addModal, setAddModal] = useState(false)
@@ -51,13 +52,17 @@ export const ClientDetail = () => {
   const openSession = (session: Session) => {
     setActiveSession(session)
     setEditDuration(session.duration)
+    setEditStatus(session.status)
     setEditDate(session.date)
     setEditTime(session.startTime)
   }
 
-  const handleSaveSession = (status: SessionStatus) => {
+  const handleSaveSession = () => {
     if (!activeSession) return
-    const updates: Partial<Session> = { status, duration: editDuration ?? activeSession.duration }
+    const updates: Partial<Session> = {
+      status: editStatus ?? activeSession.status,
+      duration: editDuration ?? activeSession.duration,
+    }
     if (!activeSession.isRecurring) {
       updates.date = editDate || activeSession.date
       updates.startTime = editTime || activeSession.startTime
@@ -285,8 +290,12 @@ export const ClientDetail = () => {
                 {(['completed', 'cancelled', 'late_cancel', 'rescheduled'] as SessionStatus[]).map(status => (
                   <button
                     key={status}
-                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2"
-                    onClick={() => handleSaveSession(status)}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 border transition-colors ${
+                      editStatus === status
+                        ? 'border-[#635BFF] bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                    }`}
+                    onClick={() => setEditStatus(status)}
                   >
                     <Badge color={STATUS_COLORS[status]}>{t.statusLabels[status]}</Badge>
                   </button>
@@ -294,7 +303,10 @@ export const ClientDetail = () => {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+            <div className="pt-2 space-y-2 border-t border-slate-100 dark:border-slate-700">
+              <Button fullWidth onClick={handleSaveSession}>
+                {t.saveChanges}
+              </Button>
               <button
                 className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium text-red-500"
                 onClick={() => { deleteSession(activeSession.id); setActiveSession(null) }}
