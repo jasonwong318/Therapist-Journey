@@ -30,7 +30,12 @@ export const Dashboard = () => {
     .filter(s => s.date === today && s.status !== 'cancelled')
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
-  const monthSessions = sessions.filter(s => isInMonth(s.date, selectedMonth) && s.status === 'completed')
+  const isFuture = selectedMonth > currentMonth()
+
+  // For future months: assume all non-cancelled sessions are attended (projected income)
+  const monthSessions = sessions.filter(s => isInMonth(s.date, selectedMonth) && (
+    isFuture ? s.status !== 'cancelled' : s.status === 'completed'
+  ))
   const monthEarned = monthSessions.reduce((sum, s) => {
     const client = clients.find(c => c.id === s.clientId)
     return sum + (client ? client.hourlyRate * s.duration : 0)
@@ -47,7 +52,9 @@ export const Dashboard = () => {
   const clientMonthly = clients.filter(c => !c.archivedAt).map(client => {
     const completed = sessions.filter(s => s.clientId === client.id && isInMonth(s.date, selectedMonth) && s.status === 'completed')
     const scheduled = sessions.filter(s => s.clientId === client.id && isInMonth(s.date, selectedMonth) && s.status === 'scheduled')
-    const earned = completed.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+    const earned = isFuture
+      ? sessions.filter(s => s.clientId === client.id && isInMonth(s.date, selectedMonth) && s.status !== 'cancelled').reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+      : completed.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
     return { client, completed: completed.length, scheduled: scheduled.length, earned }
   }).filter(x => x.completed > 0 || x.scheduled > 0)
 
@@ -83,9 +90,9 @@ export const Dashboard = () => {
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="!p-4">
-          <p className="text-xs text-slate-400 font-medium">{t.thisMonth}</p>
-          <p className="text-2xl font-bold text-[#635BFF] mt-1">{cur} {monthEarned.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{monthSessions.length} {t.sessions}</p>
+          <p className="text-xs text-slate-400 font-medium">{isFuture ? t.projected : t.thisMonth}</p>
+          <p className={`text-2xl font-bold mt-1 ${isFuture ? 'text-slate-400' : 'text-[#635BFF]'}`}>{cur} {monthEarned.toLocaleString()}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{monthSessions.length} {t.sessions}{isFuture ? ` (${t.projected})` : ''}</p>
         </Card>
         <Card className="!p-4">
           <p className="text-xs text-slate-400 font-medium">{t.outstanding}</p>
