@@ -74,26 +74,34 @@ export const InvoiceDetail = () => {
       <div>
         <h2 className="text-sm font-semibold text-slate-900 mb-3">{t.sessionBreakdown}</h2>
         <Card padding={false}>
+          {/* Header row */}
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-4 py-2 border-b border-slate-100 bg-slate-50 rounded-t-2xl">
+            <p className="text-xs font-medium text-slate-400">{t.dateLabel}</p>
+            <p className="text-xs font-medium text-slate-400">{t.timeLabel}</p>
+            <p className="text-xs font-medium text-slate-400 text-center">{t.sessions}</p>
+            <p className="text-xs font-medium text-slate-400 text-right">{cur}</p>
+          </div>
           {invSessions.map((s, i) => {
             const [h, m] = s.startTime.split(':').map(Number)
             const endMins = h * 60 + m + s.duration * 60
             const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
             const isBillable = s.status === 'completed' || s.status === 'late_cancel'
             return (
-              <div key={s.id} className={`flex items-center justify-between px-4 py-3.5 ${i < invSessions.length - 1 ? 'border-b border-slate-50' : ''}`}>
-                <div>
-                  <p className={`text-sm font-medium ${isBillable ? 'text-slate-900' : 'text-slate-400 line-through'}`}>{formatDisplay(s.date)}</p>
-                  <p className="text-xs text-slate-400">{s.startTime}–{endTime}</p>
-                </div>
-                <p className={`text-sm font-semibold ${isBillable ? 'text-slate-900' : 'text-slate-300'}`}>
-                  {isBillable ? `${cur} ${(client.hourlyRate * s.duration).toLocaleString()}` : t.statusLabels[s.status]}
+              <div key={s.id} className={`grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 ${i < invSessions.length - 1 ? 'border-b border-slate-50' : ''}`}>
+                <p className={`text-sm font-medium ${isBillable ? 'text-slate-900' : 'text-slate-400 line-through'}`}>{formatDisplay(s.date)}</p>
+                <p className="text-xs text-slate-500 whitespace-nowrap">{s.startTime}–{endTime}</p>
+                <p className="text-xs text-slate-500 text-center">{isBillable ? `1${t.sessions}` : '–'}</p>
+                <p className={`text-sm font-semibold text-right whitespace-nowrap ${isBillable ? 'text-slate-900' : 'text-slate-300'}`}>
+                  {isBillable ? (client.hourlyRate * s.duration).toLocaleString() : t.statusLabels[s.status]}
                 </p>
               </div>
             )
           })}
-          <div className="flex items-center justify-between px-4 py-3.5 bg-slate-50 rounded-b-2xl">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 bg-slate-50 rounded-b-2xl border-t border-slate-100">
             <p className="text-sm font-bold text-slate-900">{t.total}</p>
-            <p className="text-sm font-bold text-[#635BFF]">{cur} {displayTotal.toLocaleString()}</p>
+            <p className="text-xs text-slate-400 text-center">{billableSessions.length}{t.sessions}</p>
+            <span />
+            <p className="text-sm font-bold text-[#635BFF] text-right">{displayTotal.toLocaleString()}</p>
           </div>
         </Card>
       </div>
