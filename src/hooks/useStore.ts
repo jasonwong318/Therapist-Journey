@@ -17,13 +17,16 @@ export const useStore = () => {
   const [settings, setSettingsState] = useState<AppSettings>(() => loadSettings())
   const [holidays, setHolidaysState] = useState<Holiday[]>(() => loadHolidays())
 
-  useEffect(() => {
+  const buildMonthsAhead = (count: number) => {
     const now = new Date()
-    const months = [
-      { year: now.getFullYear(), month: now.getMonth() },
-      { year: now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear(), month: now.getMonth() === 11 ? 0 : now.getMonth() + 1 },
-    ]
+    return Array.from({ length: count }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+      return { year: d.getFullYear(), month: d.getMonth() }
+    })
+  }
 
+  useEffect(() => {
+    const months = buildMonthsAhead(6)
     const current = loadClients()
     const existing = loadSessions()
     const hols = loadHolidays()
@@ -81,14 +84,26 @@ export const useStore = () => {
     })
   }, [])
 
+  const ensureSessionsForMonth = useCallback((year: number, month: number) => {
+    setSessions(prev => {
+      const current = loadClients()
+      const hols = loadHolidays()
+      const newSessions = generateSessionsForMonth(current, prev, year, month, hols)
+      if (newSessions.length === 0) return prev
+      const next = [...prev, ...newSessions]
+      saveSessions(next)
+      return next
+    })
+  }, [setSessions])
+
   const addClient = useCallback((client: Omit<Client, 'id'>) => {
     const newClient: Client = { ...client, id: nanoid() }
     setClients(prev => [...prev, newClient])
     const now = new Date()
-    const months = [
-      { year: now.getFullYear(), month: now.getMonth() },
-      { year: now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear(), month: now.getMonth() === 11 ? 0 : now.getMonth() + 1 },
-    ]
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+      return { year: d.getFullYear(), month: d.getMonth() }
+    })
     const hols = loadHolidays()
     setSessions(prev => {
       let all = [...prev]
@@ -122,7 +137,6 @@ export const useStore = () => {
   const addHoliday = useCallback((date: string, label: string) => {
     const h: Holiday = { id: nanoid(), date, label }
     setHolidays(prev => [...prev, h])
-    // Cancel all scheduled recurring sessions on this date
     setSessions(prev => prev.map(s =>
       s.date === date && s.status === 'scheduled' && s.isRecurring
         ? { ...s, status: 'cancelled' as const }
@@ -164,6 +178,7 @@ export const useStore = () => {
     setClients, setSessions, setInvoices, setSettings, setHolidays,
     addClient, updateClient, updateSession, addSession, deleteSession,
     addHoliday, removeHoliday, createInvoice, updateInvoice,
+    ensureSessionsForMonth,
   }
 }
 
