@@ -118,7 +118,26 @@ export const useStore = () => {
 
   const updateClient = useCallback((id: string, updates: Partial<Client>) => {
     setClients(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c))
-  }, [setClients])
+    // Regenerate sessions if schedule changed
+    if (updates.schedule) {
+      const now = new Date()
+      const months = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+        return { year: d.getFullYear(), month: d.getMonth() }
+      })
+      const hols = loadHolidays()
+      const allClients = loadClients()
+      const updatedClient = { ...allClients.find(c => c.id === id)!, ...updates }
+      setSessions(prev => {
+        let all = [...prev]
+        for (const { year, month } of months) {
+          const newSessions = generateSessionsForMonth([updatedClient], all, year, month, hols)
+          all = [...all, ...newSessions]
+        }
+        return all
+      })
+    }
+  }, [setClients, setSessions])
 
   const updateSession = useCallback((id: string, updates: Partial<Session>) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s))
