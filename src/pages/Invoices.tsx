@@ -13,7 +13,7 @@ export const Invoices = () => {
 
   return (
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900">{t.invoices}</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t.invoices}</h1>
 
       {sorted.length === 0 ? (
         <Card>
@@ -32,14 +32,14 @@ export const Invoices = () => {
                 <Card className="!p-4 flex items-center gap-3 active:scale-[0.98] transition-transform">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-slate-900 text-sm">{inv.invoiceNumber}</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{inv.invoiceNumber}</p>
                       <Badge color={inv.paidAt ? 'green' : inv.sentAt ? 'yellow' : 'indigo'}>
                         {inv.paidAt ? t.paid : inv.sentAt ? t.sent : t.draft}
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">{client?.name} · {formatMonthYear(inv.month)}</p>
                   </div>
-                  <p className="font-bold text-slate-900">{cur} {inv.totalAmount.toLocaleString()}</p>
+                  <p className="font-bold text-slate-900 dark:text-slate-100">{cur} {inv.totalAmount.toLocaleString()}</p>
                 </Card>
               </Link>
             )

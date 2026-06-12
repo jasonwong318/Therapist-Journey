@@ -14,9 +14,14 @@ export interface Client {
   id: string
   name: string
   color: string
+  phone?: string // for WhatsApp, e.g. "85291234567"
   hourlyRate: number
   defaultDuration: SessionDuration
   schedule: ScheduleSlot[]
+  // Temporarily pause auto-scheduling (e.g. summer break); sessions are not
+  // generated between these dates, and resume automatically afterwards.
+  pauseStart?: string // YYYY-MM-DD
+  pauseEnd?: string   // YYYY-MM-DD
   notes: string
   archivedAt?: string
 }
@@ -54,6 +59,10 @@ export interface AppSettings {
   currency: string
   invoicePrefix: string
   nextInvoiceNumber: number
+  skipHKHolidays?: boolean // auto-skip HK public holidays when generating sessions
+  invoiceFooter?: string   // custom footer text on PDF invoices
+  githubToken?: string     // GitHub personal access token (gist scope) for cloud backup
+  githubGistId?: string    // gist id used for backup (created on first backup)
 }
 
 export interface Holiday {

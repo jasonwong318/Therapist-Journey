@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom'
 import { useStoreCtx } from '../hooks/StoreContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
+import { CLIENT_COLORS } from '../lib/constants'
 import { t } from '../lib/i18n'
-
-const CLIENT_COLORS = ['#635BFF', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
 
 export const Clients = () => {
   const { clients } = useStoreCtx()
@@ -14,7 +13,7 @@ export const Clients = () => {
   return (
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">{t.clients}</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t.clients}</h1>
         <Link to="/clients/new"><Button size="sm">+ {t.addClient}</Button></Link>
       </div>
 
@@ -36,7 +35,7 @@ export const Clients = () => {
                   {client.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-900">{client.name}</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">{client.name}</p>
                   <p className="text-xs text-slate-400 mt-0.5">
                     HKD {client.hourlyRate}{t.perHour} · {t.slotsPerWeek(client.schedule.length)}
                   </p>
