@@ -44,6 +44,11 @@ type Translations = {
   holidaySessionsCancelled: (n: number) => string; restoreCancelledSessions: string
   lateCancelHint: string
   yearOverview: string
+  bulkPauseTitle: string; bulkPauseHint: string; applyBulkPause: string; clearAllPauses: string
+  bulkPauseApplied: (n: number) => string; bulkPauseCleared: (n: number) => string; bulkPauseInvalid: string
+  autoBackupLabel: string; autoBackupHint: string
+  restoreDiff: (backup: { clients: number; sessions: number; invoices: number; exportedAt: string },
+    local: { clients: number; sessions: number; invoices: number }) => string
 }
 
 const zh: Translations = {
@@ -114,6 +119,16 @@ const zh: Translations = {
   restoreCancelledSessions: '已移除假期。要恢復當日被取消的課堂嗎？',
   lateCancelHint: '「臨時取消」會照常計費；「已取消」及「已改期」不計費。',
   yearOverview: '年度統計',
+  bulkPauseTitle: '批量暫停排課（如暑假）',
+  bulkPauseHint: '一次過為所有客人設定相同的暫停日期，期間不會自動排課，期後自動回復。個別客人可在其編輯頁面另行調整。',
+  applyBulkPause: '套用至所有客人', clearAllPauses: '清除所有暫停',
+  bulkPauseApplied: (n) => `已為 ${n} 位客人設定暫停。`,
+  bulkPauseCleared: (n) => `已清除 ${n} 位客人的暫停設定。`,
+  bulkPauseInvalid: '請填寫有效的暫停開始及結束日期（結束日期不可早於開始日期）。',
+  autoBackupLabel: '自動備份',
+  autoBackupHint: '資料變更後約 30 秒自動備份到 GitHub（需先手動備份一次）。',
+  restoreDiff: (b, l) =>
+    `雲端備份（${b.exportedAt}）：${b.clients} 位客人、${b.sessions} 堂課、${b.invoices} 張發票。\n本機現有：${l.clients} 位客人、${l.sessions} 堂課、${l.invoices} 張發票。`,
 }
 
 const en: Translations = {
@@ -184,6 +199,16 @@ const en: Translations = {
   restoreCancelledSessions: 'Holiday removed. Restore the cancelled sessions on that day?',
   lateCancelHint: '"Late Cancel" is still billed; "Cancelled" and "Rescheduled" are not.',
   yearOverview: 'Year Overview',
+  bulkPauseTitle: 'Bulk Pause Scheduling (e.g. summer break)',
+  bulkPauseHint: 'Set the same pause period for all clients at once. No sessions are auto-scheduled during the period; the schedule resumes afterwards. Individual clients can be adjusted on their edit page.',
+  applyBulkPause: 'Apply to All Clients', clearAllPauses: 'Clear All Pauses',
+  bulkPauseApplied: (n) => `Pause set for ${n} client(s).`,
+  bulkPauseCleared: (n) => `Pause cleared for ${n} client(s).`,
+  bulkPauseInvalid: 'Please enter valid pause start and end dates (end must not be before start).',
+  autoBackupLabel: 'Auto Backup',
+  autoBackupHint: 'Backs up to GitHub ~30s after data changes (run a manual backup once first).',
+  restoreDiff: (b, l) =>
+    `Cloud backup (${b.exportedAt}): ${b.clients} clients, ${b.sessions} sessions, ${b.invoices} invoices.\nLocal data: ${l.clients} clients, ${l.sessions} sessions, ${l.invoices} invoices.`,
 }
 
 export type Lang = 'zh' | 'en'

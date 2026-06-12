@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Client, Session, Invoice, AppSettings, Holiday } from '../lib/types'
 import {
   loadClients, saveClients,
@@ -8,6 +8,7 @@ import {
   loadHolidays, saveHolidays,
 } from '../lib/storage'
 import { generateSessionsForMonth } from '../lib/schedule'
+import { backupToGist, setLastBackup } from '../lib/gistBackup'
 import { isBillable } from '../lib/billing'
 import { todayStr } from '../lib/dates'
 import { nanoid } from '../lib/nanoid'
@@ -49,6 +50,25 @@ export const useStore = () => {
       setSessionsState(allSessions)
     }
   }, [])
+
+  // Auto-backup to GitHub Gist after data changes settle (debounced).
+  // Skips the initial render so merely opening the app doesn't trigger a backup,
+  // and requires an existing gist id (the first backup must be done manually).
+  const skipAutoBackup = useRef(true)
+  useEffect(() => {
+    if (skipAutoBackup.current) {
+      skipAutoBackup.current = false
+      return
+    }
+    const { autoBackup, githubToken, githubGistId } = settings
+    if (!autoBackup || !githubToken || !githubGistId) return
+    const timer = setTimeout(() => {
+      backupToGist(githubToken, githubGistId)
+        .then(() => setLastBackup())
+        .catch(() => { /* silent — next change retries; manual backup reports errors */ })
+    }, 30_000)
+    return () => clearTimeout(timer)
+  }, [clients, sessions, invoices, holidays, settings])
 
   const setClients = useCallback((updater: Client[] | ((prev: Client[]) => Client[])) => {
     setClientsState(prev => {
@@ -147,6 +167,23 @@ export const useStore = () => {
     }
   }, [clients, setClients, regenerateForClient])
 
+  // Sets the same pause period on every active client (e.g. summer break).
+  // Returns how many clients were paused so the UI can report it.
+  const bulkPause = useCallback((pauseStart: string, pauseEnd: string): number => {
+    const active = clients.filter(c => !c.archivedAt)
+    setClients(prev => prev.map(c => c.archivedAt ? c : { ...c, pauseStart, pauseEnd }))
+    for (const c of active) regenerateForClient({ ...c, pauseStart, pauseEnd })
+    return active.length
+  }, [clients, setClients, regenerateForClient])
+
+  // Clears the pause period on every active client and regenerates their sessions.
+  const clearAllPauses = useCallback((): number => {
+    const paused = clients.filter(c => !c.archivedAt && (c.pauseStart || c.pauseEnd))
+    setClients(prev => prev.map(c => c.archivedAt ? c : { ...c, pauseStart: undefined, pauseEnd: undefined }))
+    for (const c of paused) regenerateForClient({ ...c, pauseStart: undefined, pauseEnd: undefined })
+    return paused.length
+  }, [clients, setClients, regenerateForClient])
+
   // Recalculates the linked invoice's total from the post-update session list,
   // so it never drifts from session statuses.
   const updateSession = useCallback((id: string, updates: Partial<Session>) => {
@@ -240,6 +277,7 @@ export const useStore = () => {
     setClients, setSessions, setInvoices, setSettings, setHolidays,
     addClient, updateClient, updateSession, addSession, deleteSession,
     addHoliday, removeHoliday, createInvoice, updateInvoice, deleteInvoice,
+    bulkPause, clearAllPauses,
     ensureSessionsForMonth,
   }
 }

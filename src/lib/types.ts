@@ -63,6 +63,7 @@ export interface AppSettings {
   invoiceFooter?: string   // custom footer text on PDF invoices
   githubToken?: string     // GitHub personal access token (gist scope) for cloud backup
   githubGistId?: string    // gist id used for backup (created on first backup)
+  autoBackup?: boolean     // auto-backup to gist (debounced) whenever data changes
 }
 
 export interface Holiday {

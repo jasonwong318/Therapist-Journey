@@ -11,10 +11,11 @@ import { formatDisplay } from '../lib/dates'
 
 export const Settings = () => {
   const navigate = useNavigate()
-  const { settings, setSettings, holidays, removeHoliday } = useStoreCtx()
+  const { settings, setSettings, holidays, removeHoliday, clients, sessions, invoices, bulkPause, clearAllPauses } = useStoreCtx()
   const [form, setForm] = useState({ ...settings })
   const [saved, setSaved] = useState(false)
   const [backupState, setBackupState] = useState<'idle' | 'busy' | 'ok' | 'fail'>('idle')
+  const [pauseRange, setPauseRange] = useState({ start: '', end: '' })
 
   const handleSave = () => {
     setSettings({ ...form, nextInvoiceNumber: Math.max(1, Number(form.nextInvoiceNumber) || 1) })
@@ -75,17 +76,51 @@ export const Settings = () => {
 
   const handleCloudRestore = async () => {
     if (!form.githubToken || !form.githubGistId) return
-    if (!window.confirm(t.restoreConfirm)) return
     setBackupState('busy')
     try {
-      const data = await restoreFromGist(form.githubToken, form.githubGistId)
-      importData(data as Parameters<typeof importData>[0])
+      // Fetch first so the confirm dialog can show what would be overwritten.
+      const data = await restoreFromGist(form.githubToken, form.githubGistId) as Parameters<typeof importData>[0]
+      const diff = t.restoreDiff(
+        {
+          clients: data.clients?.length ?? 0,
+          sessions: data.sessions?.length ?? 0,
+          invoices: data.invoices?.length ?? 0,
+          exportedAt: (data.exportedAt ?? '').slice(0, 10) || '—',
+        },
+        { clients: clients.length, sessions: sessions.length, invoices: invoices.length },
+      )
+      if (!window.confirm(`${diff}\n\n${t.restoreConfirm}`)) {
+        setBackupState('idle')
+        return
+      }
+      importData(data)
       window.location.reload()
     } catch {
       setBackupState('fail')
       alert(t.restoreFailed)
       setTimeout(() => setBackupState('idle'), 3000)
     }
+  }
+
+  const handleBulkPause = () => {
+    const { start, end } = pauseRange
+    if (!start || !end || end < start) {
+      alert(t.bulkPauseInvalid)
+      return
+    }
+    const n = bulkPause(start, end)
+    alert(t.bulkPauseApplied(n))
+  }
+
+  const handleClearPauses = () => {
+    const n = clearAllPauses()
+    alert(t.bulkPauseCleared(n))
+  }
+
+  const toggleAutoBackup = (on: boolean) => {
+    const next = { ...form, autoBackup: on }
+    setForm(next)
+    setSettings({ ...next, nextInvoiceNumber: Math.max(1, Number(next.nextInvoiceNumber) || 1) })
   }
 
   const field = (key: keyof typeof form) => ({
@@ -156,6 +191,29 @@ export const Settings = () => {
       </Button>
 
       <div>
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t.bulkPauseTitle}</h2>
+        <Card>
+          <div className="space-y-4">
+            <p className="text-xs text-slate-400">{t.bulkPauseHint}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label={t.pauseStart} type="date" value={pauseRange.start}
+                onChange={e => setPauseRange(r => ({ ...r, start: e.target.value }))} />
+              <Input label={t.pauseEnd} type="date" value={pauseRange.end}
+                onChange={e => setPauseRange(r => ({ ...r, end: e.target.value }))} />
+            </div>
+            <div className="flex gap-2">
+              <Button fullWidth onClick={handleBulkPause} disabled={!pauseRange.start || !pauseRange.end}>
+                {t.applyBulkPause}
+              </Button>
+              <Button fullWidth variant="secondary" onClick={handleClearPauses}>
+                {t.clearAllPauses}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div>
         <p className="text-xs text-slate-400 mb-3">{t.manageHolidays}</p>
         <Card padding={false}>
           {sortedHolidays.length === 0 ? (
@@ -193,6 +251,19 @@ export const Settings = () => {
                 </Button>
               )}
             </div>
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.autoBackupLabel}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{t.autoBackupHint}</p>
+              </div>
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-[#635BFF]"
+                checked={!!form.autoBackup}
+                disabled={!form.githubToken || !form.githubGistId}
+                onChange={e => toggleAutoBackup(e.target.checked)}
+              />
+            </label>
             <p className="text-xs text-slate-400 text-center">
               {lastBackup ? t.lastBackup(formatDisplay(lastBackup.slice(0, 10))) : t.neverBackedUp}
             </p>
