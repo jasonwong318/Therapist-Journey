@@ -5,8 +5,9 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
-import { formatDisplayWithDay, currentMonth, isInMonth, formatMonthYear, todayStr } from '../lib/dates'
+import { formatDisplayWithDay, currentMonth, isInMonth, formatMonthYear, todayStr, monthSelectorOptions, addDaysStr } from '../lib/dates'
 import { getHKHolidayLabel } from '../lib/hkHolidays'
+import { billableTotal } from '../lib/billing'
 import { t } from '../lib/i18n'
 import type { Session, SessionStatus, SessionDuration } from '../lib/types'
 
@@ -29,6 +30,7 @@ export const ClientDetail = () => {
   const [editStatus, setEditStatus] = useState<SessionStatus | null>(null)
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
+  const [editNotes, setEditNotes] = useState('')
   const [addModal, setAddModal] = useState(false)
   const [newDate, setNewDate] = useState(todayStr())
   const [newTime, setNewTime] = useState('10:00')
@@ -48,6 +50,7 @@ export const ClientDetail = () => {
   const monthInvoice = invoices.find(inv => inv.clientId === id && inv.month === selectedMonth)
 
   const isFutureMonth = selectedMonth > currentMonth()
+  const isPaused = !!client.pauseStart && !!client.pauseEnd && todayStr() >= client.pauseStart && todayStr() <= client.pauseEnd
 
   const openSession = (session: Session) => {
     setActiveSession(session)
@@ -55,6 +58,7 @@ export const ClientDetail = () => {
     setEditStatus(session.status)
     setEditDate(session.date)
     setEditTime(session.startTime)
+    setEditNotes(session.notes)
   }
 
   const handleSaveSession = () => {
@@ -62,6 +66,7 @@ export const ClientDetail = () => {
     const updates: Partial<Session> = {
       status: editStatus ?? activeSession.status,
       duration: editDuration ?? activeSession.duration,
+      notes: editNotes,
     }
     if (!activeSession.isRecurring) {
       updates.date = editDate || activeSession.date
@@ -70,6 +75,31 @@ export const ClientDetail = () => {
     updateSession(activeSession.id, updates)
     setActiveSession(null)
   }
+
+  const handleDeleteSession = () => {
+    if (!activeSession) return
+    if (!window.confirm(t.confirmDeleteSession)) return
+    deleteSession(activeSession.id)
+    setActiveSession(null)
+  }
+
+  const handleCopyToNextWeek = () => {
+    if (!activeSession) return
+    const date = addDaysStr(activeSession.date, 7)
+    addSession({
+      clientId: client.id,
+      date,
+      startTime: activeSession.startTime,
+      duration: activeSession.duration,
+      status: 'scheduled',
+      notes: '',
+      isRecurring: false,
+    })
+    setActiveSession(null)
+  }
+
+  const hasConflict = (date: string, time: string) =>
+    sessions.some(s => s.date === date && s.startTime === time && s.status === 'scheduled')
 
   const openAddModal = () => {
     setNewDate(todayStr())
@@ -80,6 +110,7 @@ export const ClientDetail = () => {
   }
 
   const handleAddSession = () => {
+    if (hasConflict(newDate, newTime) && !window.confirm(t.conflictWarning)) return
     addSession({
       clientId: id!,
       date: newDate,
@@ -96,33 +127,30 @@ export const ClientDetail = () => {
     if (!monthInvoice || uninvoicedSessions.length === 0) return
     const newSessionIds = [...monthInvoice.sessionIds, ...uninvoicedSessions.map(s => s.id)]
     const allSessions = sessions.filter(s => newSessionIds.includes(s.id))
-    const newTotal = allSessions.filter(s => s.status === 'completed' || s.status === 'late_cancel').reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+    const newTotal = billableTotal(allSessions, client)
     updateInvoice(monthInvoice.id, { sessionIds: newSessionIds, totalAmount: newTotal })
     uninvoicedSessions.forEach(s => updateSession(s.id, { invoiceId: monthInvoice.id }))
   }
 
-  // [+3, +2, +1, current, -1, ..., -5]: future on left, past on right
-  const monthOptions = () => {
-    const now = new Date()
-    const opts = []
-    for (let i = 3; i >= -5; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
-      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      opts.push({ value: val, label: formatMonthYear(val) })
-    }
-    return opts
+  const handleDeleteInvoice = () => {
+    if (!monthInvoice) return
+    if (!window.confirm(t.confirmVoidInvoice)) return
+    deleteInvoice(monthInvoice.id)
   }
 
   return (
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/clients')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
+        <button onClick={() => navigate('/clients')} aria-label="Back" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
           <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{client.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{client.name}</h1>
+            {isPaused && <Badge color="orange">{t.pausedTag}</Badge>}
+          </div>
           <p className="text-xs text-slate-400">{cur} {client.hourlyRate}{t.perHour}</p>
         </div>
         <Link to={`/clients/${id}/edit`}><Button variant="secondary" size="sm">{t.edit}</Button></Link>
@@ -130,7 +158,7 @@ export const ClientDetail = () => {
 
       {/* Month selector */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {monthOptions().map(opt => (
+        {monthSelectorOptions().map(opt => (
           <button
             key={opt.value}
             onClick={() => setSelectedMonth(opt.value)}
@@ -175,8 +203,8 @@ export const ClientDetail = () => {
                       </button>
                     )}
                     <button
-                      onClick={() => deleteInvoice(monthInvoice.id)}
-                      className="text-xs text-red-400 border border-red-200 px-2 py-0.5 rounded-lg font-medium"
+                      onClick={handleDeleteInvoice}
+                      className="text-xs text-red-400 border border-red-200 dark:border-red-900 px-2 py-0.5 rounded-lg font-medium"
                     >
                       {t.voidInvoice}
                     </button>
@@ -218,6 +246,7 @@ export const ClientDetail = () => {
                       {holiday && (
                         <span className="text-xs text-amber-500 font-medium">⚠ {holiday}</span>
                       )}
+                      {session.notes && <span className="text-xs">📝</span>}
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {session.startTime} · {t.hrs(session.duration)} · {cur} {(client.hourlyRate * session.duration).toLocaleString()}
@@ -301,6 +330,18 @@ export const ClientDetail = () => {
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-slate-400 mt-2">{t.lateCancelHint}</p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs text-slate-400 font-medium">{t.sessionNotes}</label>
+              <textarea
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 resize-none"
+                rows={2}
+                placeholder={t.sessionNotesPlaceholder}
+                value={editNotes}
+                onChange={e => setEditNotes(e.target.value)}
+              />
             </div>
 
             <div className="pt-2 space-y-2 border-t border-slate-100 dark:border-slate-700">
@@ -308,8 +349,14 @@ export const ClientDetail = () => {
                 {t.saveChanges}
               </Button>
               <button
+                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-[#635BFF]"
+                onClick={handleCopyToNextWeek}
+              >
+                {t.copyToNextWeek}
+              </button>
+              <button
                 className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium text-red-500"
-                onClick={() => { deleteSession(activeSession.id); setActiveSession(null) }}
+                onClick={handleDeleteSession}
               >
                 {t.deleteSession}
               </button>

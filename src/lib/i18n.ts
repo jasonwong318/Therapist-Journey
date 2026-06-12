@@ -29,6 +29,21 @@ type Translations = {
   edit: string; adhocTag: string; cost: string; dateLabel: string; timeLabel: string; durationLabel: string; statusLabel: string; hrs: (h: number) => string
   slotStartDate: string; slotEndDate: string; noEndDate: string
   updateInvoice: string; voidInvoice: string; projected: string
+  confirmDeleteSession: string; confirmVoidInvoice: string; confirmArchiveClient: string
+  invalidBackup: string
+  sessionNotes: string; sessionNotesPlaceholder: string
+  copyToNextWeek: string; conflictWarning: string
+  clientPhone: string; clientPhoneHint: string
+  pauseSchedule: string; pauseStart: string; pauseEnd: string; pauseHint: string; pausedTag: string
+  skipHKHolidays: string; skipHKHolidaysHint: string
+  invoiceFooterLabel: string; invoiceFooterPlaceholder: string
+  cloudBackup: string; githubTokenLabel: string; githubTokenHint: string
+  backupNow: string; restoreFromCloud: string; backingUp: string
+  backupSuccess: string; backupFailed: string; restoreConfirm: string; restoreFailed: string
+  lastBackup: (date: string) => string; neverBackedUp: string; backupReminder: string
+  holidaySessionsCancelled: (n: number) => string; restoreCancelledSessions: string
+  lateCancelHint: string
+  yearOverview: string
 }
 
 const zh: Translations = {
@@ -66,13 +81,39 @@ const zh: Translations = {
   paymentPlaceholder: 'FPS：9xxx xxxx\n轉數快 / 銀行轉帳...',
   invoiceSettings: '發票設定', currency: '貨幣', invoicePrefix: '發票號碼前綴',
   nextInvoiceNumber: '下一個發票號碼', saveSettings: '儲存設定', saved: '✓ 已儲存！',
-  data: '資料管理', exportBackup: '匯出備份（JSON）', importBackup: '匯入備份（JSON）',
+  data: '資料管理', exportBackup: '匙出備份（JSON）', importBackup: '匙入備份（JSON）',
   dataLocal: '所有資料儲存於本機裝置。', holidays: '假期 / 休息日',
   manageHolidays: '管理假期，自動排課將跳過這些日子。', noHolidays: '未設假期。',
   removeHoliday: '移除', addHolidayHint: '從日曆頁點擊日期可新增假期',
   edit: '編輯', adhocTag: '補堂', cost: '費用', dateLabel: '日期', timeLabel: '時間', durationLabel: '時長', statusLabel: '狀態', hrs: (h) => `${h}小時`,
   slotStartDate: '開始日期（選填）', slotEndDate: '結束日期（選填）', noEndDate: '不設結束日期',
   updateInvoice: '加入發票', voidInvoice: '刪除發票', projected: '預計',
+  confirmDeleteSession: '確定刪除此課堂？此操作無法復原。',
+  confirmVoidInvoice: '確定刪除此發票？課堂將回復為未開發票狀態。',
+  confirmArchiveClient: '確定存檔此客人？已排課堂將不再自動生成。',
+  invalidBackup: '無效的備份檔案，資料未有改動。',
+  sessionNotes: '課堂備註', sessionNotesPlaceholder: '當堂重點、功課...',
+  copyToNextWeek: '複製到下週同一時間',
+  conflictWarning: '注意：該時段已有其他課堂，確定繼續？',
+  clientPhone: 'WhatsApp 電話（選填）', clientPhoneHint: '例：85291234567（連區號，不加 +）',
+  pauseSchedule: '暫停排課（如暑假）', pauseStart: '暫停開始', pauseEnd: '暫停結束',
+  pauseHint: '此期間內不會自動排課，期後自動回復原有課表。',
+  pausedTag: '暫停中',
+  skipHKHolidays: '自動跳過香港公眾假期', skipHKHolidaysHint: '開啟後，自動排課將略過公眾假期。',
+  invoiceFooterLabel: '發票頁腳（選填）', invoiceFooterPlaceholder: '例：請於 7 日內付款。',
+  cloudBackup: '雲端備份（GitHub）',
+  githubTokenLabel: 'GitHub Token（需 gist 權限）',
+  githubTokenHint: '於 github.com → Settings → Developer settings → Personal access tokens 建立，剔選 gist 權限。資料會備份到你帳戶下的私密 Gist。',
+  backupNow: '立即備份', restoreFromCloud: '從雲端還原', backingUp: '備份中...',
+  backupSuccess: '✓ 已備份到 GitHub！', backupFailed: '備份失敗，請檢查 Token 是否正確。',
+  restoreConfirm: '從雲端還原將覆蓋本機所有資料，確定繼續？',
+  restoreFailed: '還原失敗，請檢查 Token 及網絡。',
+  lastBackup: (date) => `上次備份：${date}`, neverBackedUp: '從未備份',
+  backupReminder: '提示：已超過 30 日未備份資料，建議到「設定」備份。',
+  holidaySessionsCancelled: (n) => `已標記假期，當日 ${n} 堂已自動取消。`,
+  restoreCancelledSessions: '已移除假期。要恢復當日被取消的課堂嗎？',
+  lateCancelHint: '「臨時取消」會照常計費；「已取消」及「已改期」不計費。',
+  yearOverview: '年度統計',
 }
 
 const en: Translations = {
@@ -117,6 +158,32 @@ const en: Translations = {
   edit: 'Edit', adhocTag: 'Makeup', cost: 'Fee', dateLabel: 'Date', timeLabel: 'Time', durationLabel: 'Duration', statusLabel: 'Status', hrs: (h) => `${h}h`,
   slotStartDate: 'Start Date (optional)', slotEndDate: 'End Date (optional)', noEndDate: 'No end date',
   updateInvoice: 'Add to Invoice', voidInvoice: 'Delete Invoice', projected: 'Projected',
+  confirmDeleteSession: 'Delete this session? This cannot be undone.',
+  confirmVoidInvoice: 'Delete this invoice? Sessions will revert to uninvoiced.',
+  confirmArchiveClient: 'Archive this client? Scheduled sessions will no longer be generated.',
+  invalidBackup: 'Invalid backup file. Your data was not changed.',
+  sessionNotes: 'Session Notes', sessionNotesPlaceholder: 'Key points, homework...',
+  copyToNextWeek: 'Copy to same time next week',
+  conflictWarning: 'Warning: another session exists at this time. Continue?',
+  clientPhone: 'WhatsApp Phone (optional)', clientPhoneHint: 'e.g. 85291234567 (with country code, no +)',
+  pauseSchedule: 'Pause Schedule (e.g. summer break)', pauseStart: 'Pause From', pauseEnd: 'Pause Until',
+  pauseHint: 'No sessions are auto-scheduled during this period; the normal schedule resumes afterwards.',
+  pausedTag: 'Paused',
+  skipHKHolidays: 'Auto-skip HK public holidays', skipHKHolidaysHint: 'When on, auto-scheduling skips public holidays.',
+  invoiceFooterLabel: 'Invoice Footer (optional)', invoiceFooterPlaceholder: 'e.g. Payment due within 7 days.',
+  cloudBackup: 'Cloud Backup (GitHub)',
+  githubTokenLabel: 'GitHub Token (gist scope)',
+  githubTokenHint: 'Create at github.com → Settings → Developer settings → Personal access tokens, with the gist scope. Data is backed up to a secret Gist in your account.',
+  backupNow: 'Backup Now', restoreFromCloud: 'Restore from Cloud', backingUp: 'Backing up...',
+  backupSuccess: '✓ Backed up to GitHub!', backupFailed: 'Backup failed. Check your token.',
+  restoreConfirm: 'Restoring from cloud will overwrite all local data. Continue?',
+  restoreFailed: 'Restore failed. Check token and network.',
+  lastBackup: (date) => `Last backup: ${date}`, neverBackedUp: 'Never backed up',
+  backupReminder: 'Tip: it has been over 30 days since your last backup. Back up in Settings.',
+  holidaySessionsCancelled: (n) => `Holiday marked. ${n} session(s) that day were cancelled.`,
+  restoreCancelledSessions: 'Holiday removed. Restore the cancelled sessions on that day?',
+  lateCancelHint: '"Late Cancel" is still billed; "Cancelled" and "Rescheduled" are not.',
+  yearOverview: 'Year Overview',
 }
 
 export type Lang = 'zh' | 'en'

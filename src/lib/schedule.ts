@@ -1,5 +1,6 @@
 import type { Client, Session, Holiday } from './types'
 import { toDateStr, recurringDatesInMonth } from './dates'
+import { getHKHolidayLabel } from './hkHolidays'
 import { nanoid } from './nanoid'
 
 export const generateSessionsForMonth = (
@@ -8,6 +9,7 @@ export const generateSessionsForMonth = (
   year: number,
   month: number,
   holidays: Holiday[] = [],
+  skipHKHolidays = false,
 ): Session[] => {
   const holidayDates = new Set(holidays.map(h => h.date))
   const newSessions: Session[] = []
@@ -20,7 +22,9 @@ export const generateSessionsForMonth = (
         const dateStr = toDateStr(date)
         if (slot.startDate && dateStr < slot.startDate) continue
         if (slot.endDate && dateStr > slot.endDate) continue
+        if (client.pauseStart && client.pauseEnd && dateStr >= client.pauseStart && dateStr <= client.pauseEnd) continue
         if (holidayDates.has(dateStr)) continue
+        if (skipHKHolidays && getHKHolidayLabel(dateStr)) continue
         const alreadyExists = existingSessions.some(
           s => s.clientId === client.id && s.date === dateStr && s.startTime === slot.time && s.isRecurring
         )

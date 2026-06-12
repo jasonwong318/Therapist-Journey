@@ -2,23 +2,14 @@ import { useState } from 'react'
 import { useStoreCtx } from '../hooks/StoreContext'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
-import { todayStr, currentMonth, isInMonth, formatMonthYear } from '../lib/dates'
+import { todayStr, currentMonth, isInMonth, monthSelectorOptions } from '../lib/dates'
+import { CLIENT_COLORS } from '../lib/constants'
+import { isBillable } from '../lib/billing'
+import { getLastBackup } from '../lib/gistBackup'
 import { Link } from 'react-router-dom'
-import { t } from '../lib/i18n'
+import { t, getLang } from '../lib/i18n'
 
-const CLIENT_COLORS = ['#635BFF', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
-
-const monthOptions = () => {
-  const now = new Date()
-  const options = []
-  // future on left (+3 to -5), same order as ClientDetail
-  for (let i = 3; i >= -5; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
-    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    options.push({ value: val, label: formatMonthYear(val) })
-  }
-  return options
-}
+const BACKUP_REMINDER_DAYS = 30
 
 export const Dashboard = () => {
   const { clients, sessions, invoices, settings } = useStoreCtx()
@@ -45,7 +36,7 @@ export const Dashboard = () => {
   const unpaidTotal = unpaidInvoices.reduce((sum, inv) => {
     const client = clients.find(c => c.id === inv.clientId)
     if (!client) return sum + inv.totalAmount
-    const billable = sessions.filter(s => inv.sessionIds.includes(s.id) && (s.status === 'completed' || s.status === 'late_cancel'))
+    const billable = sessions.filter(s => inv.sessionIds.includes(s.id) && isBillable(s))
     return sum + billable.reduce((s2, s) => s2 + client.hourlyRate * s.duration, 0)
   }, 0)
 
@@ -58,18 +49,45 @@ export const Dashboard = () => {
     return { client, completed: completed.length, scheduled: scheduled.length, earned }
   }).filter(x => x.completed > 0 || x.scheduled > 0)
 
-  const opts = monthOptions()
+  // Year overview: earned per month of the current year, up to this month
+  const year = new Date().getFullYear()
+  const yearMonths = Array.from({ length: new Date().getMonth() + 1 }, (_, i) => {
+    const ym = `${year}-${String(i + 1).padStart(2, '0')}`
+    const earned = sessions.filter(s => isInMonth(s.date, ym) && s.status === 'completed').reduce((sum, s) => {
+      const client = clients.find(c => c.id === s.clientId)
+      return sum + (client ? client.hourlyRate * s.duration : 0)
+    }, 0)
+    return { ym, label: t.monthNames[i], earned }
+  }).filter(m => m.earned > 0)
+  const yearMax = Math.max(...yearMonths.map(m => m.earned), 1)
+  const yearTotal = yearMonths.reduce((s, m) => s + m.earned, 0)
+
+  const lastBackup = getLastBackup()
+  const backupOverdue = !lastBackup || (Date.now() - new Date(lastBackup).getTime()) > BACKUP_REMINDER_DAYS * 86400000
+  const hasData = clients.length > 0
+
+  const opts = monthSelectorOptions()
+  const locale = getLang() === 'en' ? 'en-US' : 'zh-HK'
 
   return (
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
       <div>
         <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-          {new Date().toLocaleDateString('zh-HK', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {new Date().toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">
           {settings.therapistName ? t.hiGreeting(settings.therapistName.split(' ')[0]) : t.dashboard}
         </h1>
       </div>
+
+      {hasData && backupOverdue && (
+        <Link to="/settings">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+            <span className="text-sm">💾</span>
+            <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">{t.backupReminder}</p>
+          </div>
+        </Link>
+      )}
 
       {/* Month selector */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
@@ -156,6 +174,28 @@ export const Dashboard = () => {
                 </Link>
               )
             })}
+          </Card>
+        </div>
+      )}
+
+      {yearMonths.length > 1 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t.yearOverview} {year}</h2>
+            <p className="text-xs font-semibold text-[#635BFF]">{cur} {yearTotal.toLocaleString()}</p>
+          </div>
+          <Card className="!p-4">
+            <div className="space-y-2">
+              {yearMonths.map(m => (
+                <div key={m.ym} className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 w-10 flex-shrink-0">{m.label}</span>
+                  <div className="flex-1 h-4 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#635BFF] rounded-full" style={{ width: `${(m.earned / yearMax) * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-300 w-20 text-right flex-shrink-0">{cur} {m.earned.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
           </Card>
         </div>
       )}

@@ -5,10 +5,9 @@ import { Modal } from '../components/ui/Modal'
 import { Button } from '../components/ui/Button'
 import { calendarWeeks, toDateStr, formatDisplay, getMonth } from '../lib/dates'
 import { getHKHolidayLabel } from '../lib/hkHolidays'
+import { CLIENT_COLORS } from '../lib/constants'
 import type { Session, SessionStatus, SessionDuration } from '../lib/types'
 import { t } from '../lib/i18n'
-
-const CLIENT_COLORS = ['#635BFF', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
 
 export const Calendar = () => {
   const { clients, sessions, holidays, updateSession, addSession, addHoliday, removeHoliday, ensureSessionsForMonth } = useStoreCtx()
@@ -110,7 +109,7 @@ export const Calendar = () => {
                   {hasContent && (
                     <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center px-0.5">
                       {isHol && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'white' : '#f87171' }} />}
-                      {daySessions.slice(0, 2).map(s => (
+                      {daySessions.filter(s => s.status !== 'cancelled').slice(0, 2).map(s => (
                         <div key={s.id} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'white' : getClientColor(s.clientId) }} />
                       ))}
                     </div>
@@ -136,7 +135,7 @@ export const Calendar = () => {
             </div>
             <div className="flex gap-2">
               {selectedIsUserHoliday ? (
-                <button onClick={() => removeHoliday(selectedDate)} className="text-xs text-red-400 font-medium">{t.cancelHoliday}</button>
+                <button onClick={() => removeHoliday(selectedDate, window.confirm(t.restoreCancelledSessions))} className="text-xs text-red-400 font-medium">{t.cancelHoliday}</button>
               ) : (
                 <button onClick={() => { setHolidayLabel(''); setHolidayModal(true) }} className="text-xs text-slate-400 font-medium">{t.addHoliday}</button>
               )}
@@ -203,6 +202,8 @@ export const Calendar = () => {
           </div>
           <Button fullWidth disabled={!newSession.clientId || !selectedDate} onClick={() => {
             if (!newSession.clientId || !selectedDate) return
+            const conflict = sessions.some(s => s.date === selectedDate && s.startTime === newSession.startTime && s.status === 'scheduled')
+            if (conflict && !window.confirm(t.conflictWarning)) return
             addSession({ clientId: newSession.clientId, date: selectedDate, startTime: newSession.startTime, duration: newSession.duration, status: 'scheduled', notes: '', isRecurring: false })
             setAddSessionModal(false)
           }}>
@@ -224,7 +225,10 @@ export const Calendar = () => {
             />
           </div>
           <Button fullWidth onClick={() => {
-            if (selectedDate) addHoliday(selectedDate, holidayLabel)
+            if (selectedDate) {
+              const cancelled = addHoliday(selectedDate, holidayLabel)
+              if (cancelled > 0) alert(t.holidaySessionsCancelled(cancelled))
+            }
             setHolidayModal(false)
           }}>
             {t.confirmMarkHoliday}

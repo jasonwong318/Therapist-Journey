@@ -53,3 +53,28 @@ export const recurringDatesInMonth = (dayOfWeek: number, year: number, month: nu
 }
 
 export const isInMonth = (dateStr: string, yearMonth: string) => dateStr.startsWith(yearMonth)
+
+// End time of a session, wrapping past midnight (23:00 + 2h → 01:00)
+export const endTimeOf = (startTime: string, durationHours: number): string => {
+  const [h, m] = startTime.split(':').map(Number)
+  const endMins = (h * 60 + m + Math.round(durationHours * 60)) % (24 * 60)
+  return `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
+}
+
+// Month selector options: future months on the left, past on the right
+export const monthSelectorOptions = (future = 3, past = 5) => {
+  const now = new Date()
+  const opts: { value: string; label: string }[] = []
+  for (let i = future; i >= -past; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    opts.push({ value: val, label: formatMonthYear(val) })
+  }
+  return opts
+}
+
+export const addDaysStr = (dateStr: string, days: number): string => {
+  const d = parseISO(dateStr)
+  d.setDate(d.getDate() + days)
+  return toDateStr(d)
+}

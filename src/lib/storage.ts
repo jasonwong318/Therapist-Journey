@@ -54,10 +54,19 @@ export const exportData = () => ({
   exportedAt: new Date().toISOString(),
 })
 
+// Validate backup shape before importing so a wrong file can't wipe real data.
+export const isValidBackup = (data: unknown): data is ReturnType<typeof exportData> => {
+  if (typeof data !== 'object' || data === null) return false
+  const d = data as Record<string, unknown>
+  return Array.isArray(d.clients) && Array.isArray(d.sessions) && Array.isArray(d.invoices)
+    && typeof d.settings === 'object' && d.settings !== null
+}
+
 export const importData = (data: ReturnType<typeof exportData>) => {
+  if (!isValidBackup(data)) throw new Error('Invalid backup file')
   saveClients(data.clients)
   saveSessions(data.sessions)
   saveInvoices(data.invoices)
-  saveSettings(data.settings)
+  saveSettings({ ...DEFAULT_SETTINGS, ...data.settings })
   if (data.holidays) saveHolidays(data.holidays)
 }
