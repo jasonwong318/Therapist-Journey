@@ -3,9 +3,10 @@ import { useStoreCtx } from '../hooks/StoreContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { formatDisplay, formatMonthYear } from '../lib/dates'
+import { formatDisplay, formatMonthYear, endTimeOf } from '../lib/dates'
+import { isBillable } from '../lib/billing'
 import { generateInvoicePDF } from '../lib/invoice'
-import { t } from '../lib/i18n'
+import { t, getLang } from '../lib/i18n'
 
 export const InvoiceDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -13,50 +14,48 @@ export const InvoiceDetail = () => {
   const { invoices, clients, sessions, settings, updateInvoice } = useStoreCtx()
 
   const invoice = invoices.find(i => i.id === id)
-  if (!invoice) return <div className="p-8 text-center text-slate-400">找不到發票。</div>
+  const client = invoice ? clients.find(c => c.id === invoice.clientId) : undefined
+  if (!invoice || !client) return <div className="p-8 text-center text-slate-400">找不到發票。</div>
 
-  const client = clients.find(c => c.id === invoice.clientId)!
   const invSessions = sessions.filter(s => invoice.sessionIds.includes(s.id)).sort((a, b) => a.date.localeCompare(b.date))
-  const billableSessions = invSessions.filter(s => s.status === 'completed' || s.status === 'late_cancel')
+  const billableSessions = invSessions.filter(isBillable)
   const displayTotal = billableSessions.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
   const cur = settings.currency
 
-  const handleDownload = () => generateInvoicePDF(invoice, client, invSessions, settings)
+  const handleDownload = () => generateInvoicePDF(invoice, client, billableSessions, settings)
 
   const handleWhatsApp = () => {
+    const zh = getLang() === 'zh'
     const lines = [
-      `${settings.therapistName || '治療師'}`,
+      `${settings.therapistName || (zh ? '治療師' : 'Therapist')}`,
       ``,
-      `${formatMonthYear(invoice.month)} 發票`,
-      `發票號碼：${invoice.invoiceNumber}`,
+      zh ? `${formatMonthYear(invoice.month)} 發票` : `Invoice for ${formatMonthYear(invoice.month)}`,
+      zh ? `發票號碼：${invoice.invoiceNumber}` : `Invoice No: ${invoice.invoiceNumber}`,
       ``,
-      ...billableSessions.map(s => {
-        const [h, m] = s.startTime.split(':').map(Number)
-        const endMins = h * 60 + m + s.duration * 60
-        const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
-        return `${formatDisplay(s.date)}  ${s.startTime}–${endTime}  ${cur}${(client.hourlyRate * s.duration).toLocaleString()}`
-      }),
+      ...billableSessions.map(s =>
+        `${formatDisplay(s.date)}  ${s.startTime}–${endTimeOf(s.startTime, s.duration)}  ${cur}${(client.hourlyRate * s.duration).toLocaleString()}`
+      ),
       ``,
-      `總計：${cur} ${displayTotal.toLocaleString()}`,
+      zh ? `總計：${cur} ${displayTotal.toLocaleString()}` : `Total: ${cur} ${displayTotal.toLocaleString()}`,
       ``,
-      settings.paymentInfo ? `付款資料：\n${settings.paymentInfo}` : '',
+      settings.paymentInfo ? (zh ? `付款資料：\n${settings.paymentInfo}` : `Payment Info:\n${settings.paymentInfo}`) : '',
     ].filter(Boolean).join('\n')
 
-    const url = `https://wa.me/?text=${encodeURIComponent(lines)}`
-    window.open(url, '_blank')
+    const target = client.phone ? `https://wa.me/${client.phone.replace(/\D/g, '')}` : 'https://wa.me/'
+    window.open(`${target}?text=${encodeURIComponent(lines)}`, '_blank')
   }
 
   return (
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-xl">
+        <button onClick={() => navigate(-1)} aria-label="Back" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
           <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-slate-900">{invoice.invoiceNumber}</h1>
-          <p className="text-xs text-slate-400">{client?.name} · {formatMonthYear(invoice.month)}</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{invoice.invoiceNumber}</h1>
+          <p className="text-xs text-slate-400">{client.name} · {formatMonthYear(invoice.month)}</p>
         </div>
         <Badge color={invoice.paidAt ? 'green' : invoice.sentAt ? 'yellow' : 'indigo'}>
           {invoice.paidAt ? t.paid : invoice.sentAt ? t.sent : t.draft}
@@ -72,33 +71,30 @@ export const InvoiceDetail = () => {
 
       {/* Sessions */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-900 mb-3">{t.sessionBreakdown}</h2>
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">{t.sessionBreakdown}</h2>
         <Card padding={false}>
           {/* Header row */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-4 py-2 border-b border-slate-100 bg-slate-50 rounded-t-2xl">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-4 py-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-t-2xl">
             <p className="text-xs font-medium text-slate-400">{t.dateLabel}</p>
             <p className="text-xs font-medium text-slate-400">{t.timeLabel}</p>
             <p className="text-xs font-medium text-slate-400 text-center">{t.sessions}</p>
             <p className="text-xs font-medium text-slate-400 text-right">{cur}</p>
           </div>
           {invSessions.map((s, i) => {
-            const [h, m] = s.startTime.split(':').map(Number)
-            const endMins = h * 60 + m + s.duration * 60
-            const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
-            const isBillable = s.status === 'completed' || s.status === 'late_cancel'
+            const billable = isBillable(s)
             return (
-              <div key={s.id} className={`grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 ${i < invSessions.length - 1 ? 'border-b border-slate-50' : ''}`}>
-                <p className={`text-sm font-medium ${isBillable ? 'text-slate-900' : 'text-slate-400 line-through'}`}>{formatDisplay(s.date)}</p>
-                <p className="text-xs text-slate-500 whitespace-nowrap">{s.startTime}–{endTime}</p>
-                <p className="text-xs text-slate-500 text-center">{isBillable ? `1${t.sessions}` : '–'}</p>
-                <p className={`text-sm font-semibold text-right whitespace-nowrap ${isBillable ? 'text-slate-900' : 'text-slate-300'}`}>
-                  {isBillable ? (client.hourlyRate * s.duration).toLocaleString() : t.statusLabels[s.status]}
+              <div key={s.id} className={`grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 ${i < invSessions.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}>
+                <p className={`text-sm font-medium ${billable ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 line-through'}`}>{formatDisplay(s.date)}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{s.startTime}–{endTimeOf(s.startTime, s.duration)}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-center">{billable ? `1${t.sessions}` : '–'}</p>
+                <p className={`text-sm font-semibold text-right whitespace-nowrap ${billable ? 'text-slate-900 dark:text-slate-100' : 'text-slate-300 dark:text-slate-600'}`}>
+                  {billable ? (client.hourlyRate * s.duration).toLocaleString() : t.statusLabels[s.status]}
                 </p>
               </div>
             )
           })}
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 bg-slate-50 rounded-b-2xl border-t border-slate-100">
-            <p className="text-sm font-bold text-slate-900">{t.total}</p>
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-b-2xl border-t border-slate-100 dark:border-slate-700">
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{t.total}</p>
             <p className="text-xs text-slate-400 text-center">{billableSessions.length}{t.sessions}</p>
             <span />
             <p className="text-sm font-bold text-[#635BFF] text-right">{displayTotal.toLocaleString()}</p>
@@ -149,12 +145,12 @@ export const InvoiceDetail = () => {
       <Card className="!p-4 space-y-2">
         <div className="flex justify-between text-xs">
           <span className="text-slate-400">{t.issued}</span>
-          <span className="text-slate-700">{formatDisplay(invoice.issuedAt.slice(0, 10))}</span>
+          <span className="text-slate-700 dark:text-slate-300">{formatDisplay(invoice.issuedAt.slice(0, 10))}</span>
         </div>
         {invoice.sentAt && (
           <div className="flex justify-between text-xs">
             <span className="text-slate-400">{t.sentDate}</span>
-            <span className="text-slate-700">{formatDisplay(invoice.sentAt.slice(0, 10))}</span>
+            <span className="text-slate-700 dark:text-slate-300">{formatDisplay(invoice.sentAt.slice(0, 10))}</span>
           </div>
         )}
         {invoice.paidAt && (

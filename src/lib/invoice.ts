@@ -1,93 +1,91 @@
 import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import html2canvas from 'html2canvas'
 import type { Client, Session, Invoice, AppSettings } from './types'
-import { formatDisplay, formatMonthYear } from './dates'
+import { formatDisplay, formatMonthYear, endTimeOf } from './dates'
+import { isBillable } from './billing'
+import { t } from './i18n'
 
-export const generateInvoicePDF = (
+// Renders the invoice as styled HTML and converts to PDF via html2canvas,
+// so CJK text (client names, footer) displays correctly — jsPDF's built-in
+// fonts cannot render Chinese.
+export const generateInvoicePDF = async (
   invoice: Invoice,
   client: Client,
   sessions: Session[],
   settings: AppSettings,
 ) => {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const cur = settings.currency
+  const billable = sessions.filter(isBillable).sort((a, b) => a.date.localeCompare(b.date))
+  const total = billable.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
 
-  // Header
-  doc.setFillColor(99, 91, 255)
-  doc.rect(0, 0, 210, 28, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(20)
-  doc.setFont('helvetica', 'bold')
-  doc.text('INVOICE', 14, 18)
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'normal')
-  doc.text(invoice.invoiceNumber, 196, 18, { align: 'right' })
+  const rows = billable.map(s => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #eef2f7;">${formatDisplay(s.date)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eef2f7;">${s.startTime}–${endTimeOf(s.startTime, s.duration)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eef2f7;text-align:center;">${s.duration} hr</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eef2f7;text-align:right;">${cur} ${client.hourlyRate.toLocaleString()}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eef2f7;text-align:right;font-weight:600;">${cur} ${(client.hourlyRate * s.duration).toLocaleString()}</td>
+    </tr>`).join('')
 
-  // Therapist info
-  doc.setTextColor(30, 30, 50)
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'bold')
-  doc.text(settings.therapistName || 'Therapist', 14, 40)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.setTextColor(100, 100, 120)
-  let y = 46
-  if (settings.email) { doc.text(settings.email, 14, y); y += 5 }
-  if (settings.phone) { doc.text(settings.phone, 14, y); y += 5 }
+  const el = document.createElement('div')
+  el.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#ffffff;font-family:Inter,"PingFang TC","Microsoft JhengHei",sans-serif;color:#1e1e32;'
+  el.innerHTML = `
+    <div style="background:#635BFF;color:#fff;padding:28px 40px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:26px;font-weight:700;letter-spacing:1px;">INVOICE</span>
+      <span style="font-size:15px;">${invoice.invoiceNumber}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:32px 40px 8px;">
+      <div>
+        <div style="font-weight:700;font-size:15px;">${settings.therapistName || 'Therapist'}</div>
+        ${settings.email ? `<div style="color:#646478;font-size:12px;margin-top:4px;">${settings.email}</div>` : ''}
+        ${settings.phone ? `<div style="color:#646478;font-size:12px;margin-top:2px;">${settings.phone}</div>` : ''}
+      </div>
+      <div style="text-align:right;">
+        <div style="font-weight:700;font-size:13px;">Bill To:</div>
+        <div style="font-size:14px;margin-top:4px;">${client.name}</div>
+        <div style="color:#646478;font-size:12px;margin-top:4px;">Period: ${formatMonthYear(invoice.month)}</div>
+        <div style="color:#646478;font-size:12px;margin-top:2px;">Issued: ${formatDisplay(invoice.issuedAt.slice(0, 10))}</div>
+      </div>
+    </div>
+    <div style="padding:16px 40px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#635BFF;color:#fff;">
+            <th style="padding:8px 12px;text-align:left;">${t.dateLabel}</th>
+            <th style="padding:8px 12px;text-align:left;">${t.timeLabel}</th>
+            <th style="padding:8px 12px;text-align:center;">${t.durationLabel}</th>
+            <th style="padding:8px 12px;text-align:right;">Rate/hr</th>
+            <th style="padding:8px 12px;text-align:right;">${t.totalAmount}</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+        <div style="text-align:right;">
+          <span style="font-size:14px;font-weight:700;margin-right:24px;">${t.total}:</span>
+          <span style="font-size:18px;font-weight:700;color:#635BFF;">${cur} ${total.toLocaleString()}</span>
+        </div>
+      </div>
+      ${settings.paymentInfo ? `
+      <div style="margin-top:28px;padding-top:16px;border-top:1px solid #eef2f7;">
+        <div style="font-weight:700;font-size:12px;">Payment Info:</div>
+        <div style="color:#646478;font-size:12px;white-space:pre-wrap;margin-top:4px;">${settings.paymentInfo}</div>
+      </div>` : ''}
+      ${settings.invoiceFooter ? `
+      <div style="margin-top:20px;color:#9494a8;font-size:11px;white-space:pre-wrap;">${settings.invoiceFooter}</div>` : ''}
+      <div style="height:32px;"></div>
+    </div>`
 
-  // Client info
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(30, 30, 50)
-  doc.text('Bill To:', 120, 40)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.text(client.name, 120, 47)
-  doc.setFontSize(9)
-  doc.setTextColor(100, 100, 120)
-  doc.text(`Period: ${formatMonthYear(invoice.month)}`, 120, 53)
-  doc.text(`Issued: ${formatDisplay(invoice.issuedAt.slice(0, 10))}`, 120, 58)
-
-  // Sessions table
-  const rows = sessions.map(s => [
-    formatDisplay(s.date),
-    s.startTime,
-    `${s.duration} hr${s.duration > 1 ? 's' : ''}`,
-    `${cur} ${client.hourlyRate.toLocaleString()}`,
-    `${cur} ${(client.hourlyRate * s.duration).toLocaleString()}`,
-  ])
-
-  autoTable(doc, {
-    startY: 70,
-    head: [['Date', 'Time', 'Duration', 'Rate/hr', 'Amount']],
-    body: rows,
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [99, 91, 255], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [246, 249, 252] },
-    columnStyles: { 4: { halign: 'right' } },
-  })
-
-  const finalY = (doc as any).lastAutoTable.finalY + 8
-
-  // Total
-  doc.setDrawColor(220, 220, 230)
-  doc.line(120, finalY, 196, finalY)
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(30, 30, 50)
-  doc.text('Total:', 120, finalY + 8)
-  doc.setTextColor(99, 91, 255)
-  doc.text(`${cur} ${invoice.totalAmount.toLocaleString()}`, 196, finalY + 8, { align: 'right' })
-
-  // Payment info
-  if (settings.paymentInfo) {
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(100, 100, 120)
-    doc.text('Payment Info:', 14, finalY + 8)
-    const lines = doc.splitTextToSize(settings.paymentInfo, 90)
-    doc.text(lines, 14, finalY + 14)
+  document.body.appendChild(el)
+  try {
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' })
+    const img = canvas.toDataURL('image/png')
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageW = 210
+    const imgH = (canvas.height * pageW) / canvas.width
+    doc.addImage(img, 'PNG', 0, 0, pageW, imgH)
+    doc.save(`${invoice.invoiceNumber}-${client.name}.pdf`)
+  } finally {
+    document.body.removeChild(el)
   }
-
-  doc.save(`${invoice.invoiceNumber}-${client.name}.pdf`)
 }

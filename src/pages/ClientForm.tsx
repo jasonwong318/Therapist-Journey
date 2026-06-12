@@ -13,18 +13,34 @@ export const ClientForm = () => {
   const existing = id ? clients.find(c => c.id === id) : undefined
 
   const [name, setName] = useState(existing?.name ?? '')
+  const [phone, setPhone] = useState(existing?.phone ?? '')
   const [hourlyRate, setHourlyRate] = useState(String(existing?.hourlyRate ?? ''))
   const [defaultDuration, setDefaultDuration] = useState<SessionDuration>(existing?.defaultDuration ?? 1)
   const [notes, setNotes] = useState(existing?.notes ?? '')
   const [schedule, setSchedule] = useState<ScheduleSlot[]>(existing?.schedule ?? [])
+  const [pauseStart, setPauseStart] = useState(existing?.pauseStart ?? '')
+  const [pauseEnd, setPauseEnd] = useState(existing?.pauseEnd ?? '')
 
-  const addSlot = () => setSchedule(prev => [...prev, { dayOfWeek: 1, time: '10:00', duration: defaultDuration, startDate: '', endDate: '' }])
+  const addSlot = () => setSchedule(prev => [...prev, { dayOfWeek: 1, time: '10:00', duration: defaultDuration }])
   const removeSlot = (i: number) => setSchedule(prev => prev.filter((_, idx) => idx !== i))
   const updateSlot = (i: number, patch: Partial<ScheduleSlot>) => setSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s))
 
+  const rateNum = Number(hourlyRate)
+  const valid = !!name.trim() && Number.isFinite(rateNum) && rateNum > 0
+
   const handleSubmit = () => {
-    if (!name.trim() || !hourlyRate) return
-    const data = { name: name.trim(), color: '', hourlyRate: Number(hourlyRate), defaultDuration, notes, schedule }
+    if (!valid) return
+    const data = {
+      name: name.trim(),
+      color: '',
+      phone: phone.trim() || undefined,
+      hourlyRate: rateNum,
+      defaultDuration,
+      notes,
+      schedule,
+      pauseStart: pauseStart || undefined,
+      pauseEnd: pauseEnd || undefined,
+    }
     if (existing) {
       updateClient(existing.id, data)
       navigate(`/clients/${existing.id}`)
@@ -37,17 +53,21 @@ export const ClientForm = () => {
   return (
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-xl">
+        <button onClick={() => navigate(-1)} aria-label="Back" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
           <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-slate-900">{existing ? t.editClient : t.newClient}</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{existing ? t.editClient : t.newClient}</h1>
       </div>
 
       <div className="space-y-4">
         <Input label={t.clientName} value={name} onChange={e => setName(e.target.value)} placeholder={t.clientNamePlaceholder} />
-        <Input label={t.hourlyRate} type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="例：800" />
+        <div>
+          <Input label={t.clientPhone} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="85291234567" />
+          <p className="text-xs text-slate-400 mt-1">{t.clientPhoneHint}</p>
+        </div>
+        <Input label={t.hourlyRate} type="number" min={1} value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="例：800" />
         <Select label={t.defaultDuration} value={defaultDuration} onChange={e => setDefaultDuration(Number(e.target.value) as SessionDuration)}>
           <option value={1}>{t.oneHour}</option>
           <option value={1.5}>{t.oneHalfHour}</option>
@@ -58,17 +78,17 @@ export const ClientForm = () => {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-900">{t.weeklySchedule}</h2>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t.weeklySchedule}</h2>
           <button onClick={addSlot} className="text-sm text-[#635BFF] font-medium">{t.addSlot}</button>
         </div>
         {schedule.length === 0 && (
-          <p className="text-sm text-slate-400 text-center py-4 border-2 border-dashed border-slate-200 rounded-xl">
+          <p className="text-sm text-slate-400 text-center py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
             {t.noSlots}
           </p>
         )}
         <div className="space-y-3">
           {schedule.map((slot, i) => (
-            <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-3">
+            <div key={i} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <Select label={t.day} value={slot.dayOfWeek} onChange={e => updateSlot(i, { dayOfWeek: Number(e.target.value) })}>
                   {t.daysLong.map((d, di) => <option key={di} value={di}>{d}</option>)}
@@ -83,7 +103,7 @@ export const ClientForm = () => {
                     <option value={2}>{t.twoHours}</option>
                   </Select>
                 </div>
-                <button onClick={() => removeSlot(i)} className="mt-5 p-2 text-red-400 hover:bg-red-50 rounded-lg">
+                <button onClick={() => removeSlot(i)} aria-label="Remove slot" className="mt-5 p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
@@ -98,7 +118,17 @@ export const ClientForm = () => {
         </div>
       </div>
 
-      <Button fullWidth onClick={handleSubmit} disabled={!name.trim() || !hourlyRate}>
+      {/* Pause schedule (e.g. summer break) */}
+      <div>
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">{t.pauseSchedule}</h2>
+        <p className="text-xs text-slate-400 mb-3">{t.pauseHint}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Input label={t.pauseStart} type="date" value={pauseStart} onChange={e => setPauseStart(e.target.value)} />
+          <Input label={t.pauseEnd} type="date" value={pauseEnd} onChange={e => setPauseEnd(e.target.value)} />
+        </div>
+      </div>
+
+      <Button fullWidth onClick={handleSubmit} disabled={!valid}>
         {existing ? t.saveChanges : t.addClient}
       </Button>
 
@@ -112,6 +142,7 @@ export const ClientForm = () => {
           </Button>
         ) : (
           <Button fullWidth variant="danger" onClick={() => {
+            if (!window.confirm(t.confirmArchiveClient)) return
             updateClient(existing.id, { archivedAt: new Date().toISOString() })
             navigate('/clients')
           }}>
