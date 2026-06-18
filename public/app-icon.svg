@@ -1,34 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#FAFAF8"/>
+  <rect width="512" height="512" rx="120" fill="#FAFAF8"/>
 
-  <!-- left book page: soft Obsidian purple, pointed top/bottom like a page corner -->
-  <path d="M256 56
-           L196 102
-           C 162 126 148 148 148 172
-           L148 340
-           C 148 364 162 386 196 410
-           L256 456
+  <!-- left ribbon/page: soft Obsidian purple -->
+  <path d="M 176 110
+           L 256 110
+           L 256 404
+           Q 256 416 246 408
+           L 156 344
+           Q 146 337 146 322
+           L 146 146
+           Q 146 110 176 110
            Z" fill="#9B59E0"/>
-  <!-- left page edge lines (suggests stacked pages underneath) -->
-  <path d="M210 96 C 178 122 166 144 166 172 L166 340 C 166 366 178 386 210 410" fill="none" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="6" stroke-linecap="round"/>
-  <path d="M232 76 C 196 106 184 132 184 164 L184 348 C 184 378 196 402 232 432" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="6" stroke-linecap="round"/>
+  <!-- left page edge lines -->
+  <path d="M 196 140 L 196 384" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="7" stroke-linecap="round"/>
+  <path d="M 222 140 L 222 396" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="7" stroke-linecap="round"/>
 
-  <!-- right book page: Claude clay orange -->
-  <path d="M256 56
-           L316 102
-           C 350 126 364 148 364 172
-           L364 340
-           C 364 364 350 386 316 410
-           L256 456
+  <!-- right ribbon/page: Claude clay orange -->
+  <path d="M 336 110
+           L 256 110
+           L 256 404
+           Q 256 416 266 408
+           L 356 344
+           Q 366 337 366 322
+           L 366 146
+           Q 366 110 336 110
            Z" fill="#D97757"/>
   <!-- right page edge lines -->
-  <path d="M302 96 C 334 122 346 144 346 172 L346 340 C 346 366 334 386 302 410" fill="none" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="6" stroke-linecap="round"/>
-  <path d="M280 76 C 316 106 328 132 328 164 L328 348 C 328 378 316 402 280 432" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 316 140 L 316 384" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="7" stroke-linecap="round"/>
+  <path d="M 290 140 L 290 396" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="7" stroke-linecap="round"/>
 
   <!-- spine shadow -->
-  <path d="M256 56 L256 456" stroke="#000000" stroke-opacity="0.14" stroke-width="6"/>
+  <path d="M256 110 L256 404" stroke="#000000" stroke-opacity="0.14" stroke-width="6"/>
 
-  <text x="256" y="266" text-anchor="middle" dominant-baseline="central"
-        font-family="DejaVu Sans" font-weight="bold" font-size="196"
+  <text x="256" y="262" text-anchor="middle" dominant-baseline="central"
+        font-family="DejaVu Sans" font-weight="bold" font-size="200"
         fill="#FFFFFF" stroke="#FFFFFF" stroke-width="16" paint-order="stroke" stroke-linejoin="round">$</text>
 </svg>
