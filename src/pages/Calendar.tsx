@@ -194,6 +194,7 @@ export const Calendar = () => {
             <div className="flex-1 flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.duration}</label>
               <select className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 dark:text-slate-100" value={newSession.duration} onChange={e => setNewSession(s => ({ ...s, duration: Number(e.target.value) as SessionDuration }))}>
+                <option value={0.5}>{t.halfHour}</option>
                 <option value={1}>{t.oneHour}</option>
                 <option value={1.5}>{t.oneHalfHour}</option>
                 <option value={2}>{t.twoHours}</option>

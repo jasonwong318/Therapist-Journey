@@ -69,6 +69,7 @@ export const ClientForm = () => {
         </div>
         <Input label={t.hourlyRate} type="number" min={1} value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="例：800" />
         <Select label={t.defaultDuration} value={defaultDuration} onChange={e => setDefaultDuration(Number(e.target.value) as SessionDuration)}>
+          <option value={0.5}>{t.halfHour}</option>
           <option value={1}>{t.oneHour}</option>
           <option value={1.5}>{t.oneHalfHour}</option>
           <option value={2}>{t.twoHours}</option>

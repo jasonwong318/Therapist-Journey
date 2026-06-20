@@ -8,7 +8,7 @@ type Translations = {
   hourlyRate: string; defaultDuration: string; notes: string; notesPlaceholder: string
   weeklySchedule: string; addSlot: string; noSlots: string; day: string; time: string; duration: string
   saveChanges: string; archiveClient: string; unarchiveClient: string; cancel: string
-  oneHour: string; oneHalfHour: string; twoHours: string
+  halfHour: string; oneHour: string; oneHalfHour: string; twoHours: string
   days: string[]; daysLong: string[]
   noSessionsThisMonth: string; monthlyEarnings: (month: string) => string
   totalHours: (h: number) => string; invoiced: string; invoice: string; sessionBreakdown: string
@@ -63,7 +63,7 @@ const zh: Translations = {
   weeklySchedule: '每週課表', addSlot: '+ 新增時段', noSlots: '未設時段，點擊新增時段。',
   day: '星期', time: '時間', duration: '時長', saveChanges: '儲存更改', archiveClient: '存檔客人',
   unarchiveClient: '取消存檔（重新啟用）', cancel: '取消',
-  oneHour: '1 小時', oneHalfHour: '1.5 小時', twoHours: '2 小時',
+  halfHour: '0.5 小時', oneHour: '1 小時', oneHalfHour: '1.5 小時', twoHours: '2 小時',
   days: ['日', '一', '二', '三', '四', '五', '六'],
   daysLong: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
   noSessionsThisMonth: '本月沒有課堂。', monthlyEarnings: (month) => `${month} 收入`,
@@ -143,7 +143,7 @@ const en: Translations = {
   weeklySchedule: 'Weekly Schedule', addSlot: '+ Add Slot', noSlots: 'No slots yet. Tap to add.',
   day: 'Day', time: 'Time', duration: 'Duration', saveChanges: 'Save Changes', archiveClient: 'Archive Client',
   unarchiveClient: 'Unarchive (Re-activate)', cancel: 'Cancel',
-  oneHour: '1 Hour', oneHalfHour: '1.5 Hours', twoHours: '2 Hours',
+  halfHour: '30 Min', oneHour: '1 Hour', oneHalfHour: '1.5 Hours', twoHours: '2 Hours',
   days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
   daysLong: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
   noSessionsThisMonth: 'No sessions this month.', monthlyEarnings: (month) => `${month} Earnings`,

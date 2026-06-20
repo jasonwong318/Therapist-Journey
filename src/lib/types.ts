@@ -1,6 +1,6 @@
 export type SessionStatus = 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'late_cancel'
 
-export type SessionDuration = 1 | 1.5 | 2
+export type SessionDuration = 0.5 | 1 | 1.5 | 2
 
 export interface ScheduleSlot {
   dayOfWeek: number // 0=Sun, 1=Mon, ..., 6=Sat

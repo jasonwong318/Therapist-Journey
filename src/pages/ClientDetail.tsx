@@ -292,7 +292,7 @@ export const ClientDetail = () => {
             <div>
               <p className="text-xs text-slate-400 font-medium mb-2">{t.sessionDuration}</p>
               <div className="flex gap-2">
-                {([1, 1.5, 2] as SessionDuration[]).map(d => (
+                {([0.5, 1, 1.5, 2] as SessionDuration[]).map(d => (
                   <button
                     key={d}
                     onClick={() => setEditDuration(d)}
@@ -394,6 +394,7 @@ export const ClientDetail = () => {
                 value={newDuration}
                 onChange={e => setNewDuration(Number(e.target.value) as SessionDuration)}
               >
+                <option value={0.5}>{t.halfHour}</option>
                 <option value={1}>{t.oneHour}</option>
                 <option value={1.5}>{t.oneHalfHour}</option>
                 <option value={2}>{t.twoHours}</option>
