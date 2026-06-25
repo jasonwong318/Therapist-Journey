@@ -23,14 +23,19 @@ export const Dashboard = () => {
 
   const isFuture = selectedMonth > currentMonth()
 
-  // For future months: assume all non-cancelled sessions are attended (projected income)
-  const monthSessions = sessions.filter(s => isInMonth(s.date, selectedMonth) && (
-    isFuture ? s.status !== 'cancelled' : s.status === 'completed'
-  ))
-  const monthEarned = monthSessions.reduce((sum, s) => {
+  const sumEarnings = (list: typeof sessions) => list.reduce((sum, s) => {
     const client = clients.find(c => c.id === s.clientId)
     return sum + (client ? client.hourlyRate * s.duration : 0)
   }, 0)
+
+  // Projected income: every session that isn't cancelled/rescheduled (i.e. assume
+  // scheduled ones get attended) — "what this month will earn if all booked sessions happen".
+  const projectedSessions = sessions.filter(s => isInMonth(s.date, selectedMonth) && s.status !== 'cancelled' && s.status !== 'rescheduled')
+  const projectedEarned = sumEarnings(projectedSessions)
+
+  // Realised income: already-billable sessions (completed + late cancel), matching invoice totals.
+  const earnedSessions = sessions.filter(s => isInMonth(s.date, selectedMonth) && isBillable(s))
+  const monthEarned = sumEarnings(earnedSessions)
 
   const unpaidInvoices = invoices.filter(inv => !inv.paidAt && inv.month === selectedMonth)
   const unpaidTotal = unpaidInvoices.reduce((sum, inv) => {
@@ -108,16 +113,25 @@ export const Dashboard = () => {
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="!p-4">
-          <p className="text-xs text-slate-400 font-medium">{isFuture ? t.projected : t.thisMonth}</p>
-          <p className={`text-2xl font-bold mt-1 ${isFuture ? 'text-slate-400' : 'text-[#635BFF]'}`}>{cur} {monthEarned.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{monthSessions.length} {t.sessions}{isFuture ? ` (${t.projected})` : ''}</p>
+          <p className="text-xs text-slate-400 font-medium">{t.projectedIncome}</p>
+          <p className="text-2xl font-bold text-slate-500 dark:text-slate-300 mt-1">{cur} {projectedEarned.toLocaleString()}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{projectedSessions.length} {t.sessions} ({t.projected})</p>
         </Card>
         <Card className="!p-4">
-          <p className="text-xs text-slate-400 font-medium">{t.outstanding}</p>
-          <p className="text-2xl font-bold text-amber-500 mt-1">{cur} {unpaidTotal.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{unpaidInvoices.length} {t.invoicesCount}</p>
+          <p className="text-xs text-slate-400 font-medium">{t.thisMonth}</p>
+          <p className="text-2xl font-bold text-[#635BFF] mt-1">{cur} {monthEarned.toLocaleString()}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{earnedSessions.length} {t.done}</p>
         </Card>
       </div>
+
+      <Card className="!py-3 !px-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">💰</span>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{t.outstanding}</p>
+          <span className="text-xs text-slate-400">({unpaidInvoices.length} {t.invoicesCount})</span>
+        </div>
+        <p className="text-lg font-bold text-amber-500">{cur} {unpaidTotal.toLocaleString()}</p>
+      </Card>
 
       {selectedMonth === currentMonth() && (
         <div>
