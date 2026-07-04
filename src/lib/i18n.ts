@@ -44,6 +44,7 @@ type Translations = {
   holidaySessionsCancelled: (n: number) => string; restoreCancelledSessions: string
   lateCancelHint: string
   yearOverview: string
+  rescheduleHint: string; swipeToCancelHint: string
   bulkPauseTitle: string; bulkPauseHint: string; applyBulkPause: string; clearAllPauses: string
   bulkPauseApplied: (n: number) => string; bulkPauseCleared: (n: number) => string; bulkPauseInvalid: string
   autoBackupLabel: string; autoBackupHint: string
@@ -119,6 +120,8 @@ const zh: Translations = {
   restoreCancelledSessions: '已移除假期。要恢復當日被取消的課堂嗎？',
   lateCancelHint: '「臨時取消」會照常計費；「已取消」及「已改期」不計費。',
   yearOverview: '年度統計',
+  rescheduleHint: '儲存後，原本課堂會標記為「已改期」，並會喺上面揀選嘅新日期自動新增一堂。',
+  swipeToCancelHint: '提示：課堂向左滑可快速取消',
   bulkPauseTitle: '批量暫停排課（如暑假）',
   bulkPauseHint: '一次過為所有客人設定相同的暫停日期，期間不會自動排課，期後自動回復。個別客人可在其編輯頁面另行調整。',
   applyBulkPause: '套用至所有客人', clearAllPauses: '清除所有暫停',
@@ -199,6 +202,8 @@ const en: Translations = {
   restoreCancelledSessions: 'Holiday removed. Restore the cancelled sessions on that day?',
   lateCancelHint: '"Late Cancel" is still billed; "Cancelled" and "Rescheduled" are not.',
   yearOverview: 'Year Overview',
+  rescheduleHint: 'On save, this session is marked "Rescheduled" and a new session is added on the date chosen above.',
+  swipeToCancelHint: 'Tip: swipe a session left to cancel it',
   bulkPauseTitle: 'Bulk Pause Scheduling (e.g. summer break)',
   bulkPauseHint: 'Set the same pause period for all clients at once. No sessions are auto-scheduled during the period; the schedule resumes afterwards. Individual clients can be adjusted on their edit page.',
   applyBulkPause: 'Apply to All Clients', clearAllPauses: 'Clear All Pauses',

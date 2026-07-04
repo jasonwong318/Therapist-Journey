@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useStoreCtx } from '../hooks/StoreContext'
 import { Card } from '../components/ui/Card'
@@ -17,6 +17,63 @@ const STATUS_COLORS: Record<SessionStatus, 'green' | 'slate' | 'indigo' | 'orang
   scheduled: 'indigo',
   rescheduled: 'yellow',
   late_cancel: 'orange',
+}
+
+// Row that can be swiped left to reveal a cancel action. Swiping past the
+// threshold fires onSwipeCancel immediately (no confirm — the session modal
+// can undo by setting the status back).
+const SWIPE_TRIGGER = -72
+const SwipeableRow = ({ enabled, onSwipeCancel, onClick, className, children }: {
+  enabled: boolean
+  onSwipeCancel: () => void
+  onClick: () => void
+  className?: string
+  children: React.ReactNode
+}) => {
+  const [dx, setDx] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const start = useRef<{ x: number; y: number } | null>(null)
+  const horizontal = useRef(false)
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!enabled) return
+    start.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    horizontal.current = false
+    setDragging(true)
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!enabled || !start.current) return
+    const ddx = e.touches[0].clientX - start.current.x
+    const ddy = e.touches[0].clientY - start.current.y
+    if (!horizontal.current && Math.abs(ddx) > 10 && Math.abs(ddx) > Math.abs(ddy)) horizontal.current = true
+    if (horizontal.current) setDx(Math.max(-104, Math.min(0, ddx)))
+  }
+  const onTouchEnd = () => {
+    if (!enabled || !start.current) return
+    const fired = dx <= SWIPE_TRIGGER
+    start.current = null
+    setDragging(false)
+    setDx(0)
+    if (fired) onSwipeCancel()
+  }
+
+  return (
+    <div className={`relative overflow-hidden ${className ?? ''}`}>
+      <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-5" aria-hidden>
+        <span className="text-white text-sm font-semibold">{t.statusLabels.cancelled}</span>
+      </div>
+      <button
+        className="relative w-full flex items-center gap-3 px-4 py-3.5 text-left bg-white dark:bg-slate-800 active:bg-slate-50 dark:active:bg-slate-700"
+        style={{ transform: `translateX(${dx}px)`, transition: dragging ? 'none' : 'transform 0.2s ease' }}
+        onClick={() => { if (!horizontal.current) onClick() }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {children}
+      </button>
+    </div>
+  )
 }
 
 export const ClientDetail = () => {
@@ -61,17 +118,43 @@ export const ClientDetail = () => {
     setEditNotes(session.notes)
   }
 
+  // Rescheduling keeps the original session (marked 'rescheduled', unbilled) and
+  // adds a new ad-hoc session on the target date, linked via originalSessionId.
+  const isReschedulePending = (s: Session) => {
+    const status = editStatus ?? s.status
+    const becameRescheduled = status === 'rescheduled' && s.status !== 'rescheduled'
+    const movedWhileScheduled = status === 'scheduled' && !!editDate && editDate !== s.date
+    return becameRescheduled || movedWhileScheduled
+  }
+
   const handleSaveSession = () => {
     if (!activeSession) return
-    const updates: Partial<Session> = {
-      status: editStatus ?? activeSession.status,
-      duration: editDuration ?? activeSession.duration,
-      notes: editNotes,
+    const duration = editDuration ?? activeSession.duration
+    const status = editStatus ?? activeSession.status
+
+    if (isReschedulePending(activeSession)) {
+      const targetDate = editDate || addDaysStr(activeSession.date, 7)
+      const targetTime = editTime || activeSession.startTime
+      if (hasConflict(targetDate, targetTime) && !window.confirm(t.conflictWarning)) return
+      updateSession(activeSession.id, { status: 'rescheduled', duration, notes: editNotes })
+      addSession({
+        clientId: client.id,
+        date: targetDate,
+        startTime: targetTime,
+        duration,
+        status: 'scheduled',
+        notes: '',
+        isRecurring: false,
+        originalSessionId: activeSession.id,
+      })
+      setActiveSession(null)
+      return
     }
-    if (!activeSession.isRecurring) {
-      updates.date = editDate || activeSession.date
-      updates.startTime = editTime || activeSession.startTime
-    }
+
+    const updates: Partial<Session> = { status, duration, notes: editNotes }
+    // Allow date/time corrections on any session (e.g. fixing a completed record).
+    updates.date = editDate || activeSession.date
+    updates.startTime = editTime || activeSession.startTime
     updateSession(activeSession.id, updates)
     setActiveSession(null)
   }
@@ -233,10 +316,12 @@ export const ClientDetail = () => {
             {clientSessions.map((session, i) => {
               const holiday = isFutureMonth ? getHKHolidayLabel(session.date) : undefined
               return (
-                <button
+                <SwipeableRow
                   key={session.id}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50 dark:active:bg-slate-700 ${i < clientSessions.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
+                  enabled={session.status === 'scheduled'}
+                  onSwipeCancel={() => updateSession(session.id, { status: 'cancelled' })}
                   onClick={() => openSession(session)}
+                  className={i < clientSessions.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -256,10 +341,13 @@ export const ClientDetail = () => {
                   <Badge color={STATUS_COLORS[session.status]}>
                     {t.statusLabels[session.status]}
                   </Badge>
-                </button>
+                </SwipeableRow>
               )
             })}
           </Card>
+        )}
+        {clientSessions.some(s => s.status === 'scheduled') && (
+          <p className="text-xs text-slate-400 text-center mt-2">{t.swipeToCancelHint}</p>
         )}
       </div>
 
@@ -267,7 +355,7 @@ export const ClientDetail = () => {
       <Modal open={!!activeSession} onClose={() => setActiveSession(null)} title={activeSession ? formatDisplayWithDay(activeSession.date) : ''}>
         {activeSession && (
           <div className="space-y-4">
-            {!activeSession.isRecurring && (
+            <div>
               <div className="flex gap-3">
                 <div className="flex-1 flex flex-col gap-1.5">
                   <label className="text-xs text-slate-400 font-medium">{t.dateLabel}</label>
@@ -288,7 +376,10 @@ export const ClientDetail = () => {
                   />
                 </div>
               </div>
-            )}
+              {isReschedulePending(activeSession) && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">{t.rescheduleHint}</p>
+              )}
+            </div>
             <div>
               <p className="text-xs text-slate-400 font-medium mb-2">{t.sessionDuration}</p>
               <div className="flex gap-2">
@@ -324,7 +415,14 @@ export const ClientDetail = () => {
                         ? 'border-[#635BFF] bg-indigo-50 dark:bg-indigo-900/20'
                         : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                     }`}
-                    onClick={() => setEditStatus(status)}
+                    onClick={() => {
+                      setEditStatus(status)
+                      // Picking "rescheduled" starts the reschedule flow: suggest
+                      // same time next week as the target if the date is untouched.
+                      if (status === 'rescheduled' && activeSession.status !== 'rescheduled' && editDate === activeSession.date) {
+                        setEditDate(addDaysStr(activeSession.date, 7))
+                      }
+                    }}
                   >
                     <Badge color={STATUS_COLORS[status]}>{t.statusLabels[status]}</Badge>
                   </button>
