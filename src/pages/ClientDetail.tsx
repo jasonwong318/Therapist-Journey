@@ -93,6 +93,8 @@ export const ClientDetail = () => {
   const [newTime, setNewTime] = useState('10:00')
   const [newDuration, setNewDuration] = useState<SessionDuration>(1)
   const [newStatus, setNewStatus] = useState<'scheduled' | 'completed'>('completed')
+  const [undoCancel, setUndoCancel] = useState<string | null>(null) // session id of last swipe-cancel
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   if (!client) return <div className="p-8 text-center text-slate-400">找不到客人。</div>
 
@@ -179,6 +181,20 @@ export const ClientDetail = () => {
       isRecurring: false,
     })
     setActiveSession(null)
+  }
+
+  const handleSwipeCancel = (sessionId: string) => {
+    updateSession(sessionId, { status: 'cancelled' })
+    setUndoCancel(sessionId)
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    undoTimer.current = setTimeout(() => setUndoCancel(null), 6000)
+  }
+
+  const handleUndoCancel = () => {
+    if (!undoCancel) return
+    updateSession(undoCancel, { status: 'scheduled' })
+    setUndoCancel(null)
+    if (undoTimer.current) clearTimeout(undoTimer.current)
   }
 
   const hasConflict = (date: string, time: string) =>
@@ -319,7 +335,7 @@ export const ClientDetail = () => {
                 <SwipeableRow
                   key={session.id}
                   enabled={session.status === 'scheduled'}
-                  onSwipeCancel={() => updateSession(session.id, { status: 'cancelled' })}
+                  onSwipeCancel={() => handleSwipeCancel(session.id)}
                   onClick={() => openSession(session)}
                   className={i < clientSessions.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}
                 >
@@ -462,6 +478,19 @@ export const ClientDetail = () => {
           </div>
         )}
       </Modal>
+
+      {/* Undo snackbar after swipe-cancel */}
+      {undoCancel && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-slate-900 dark:bg-slate-700 text-white pl-4 pr-2 py-2 rounded-full shadow-lg">
+          <span className="text-sm">{t.sessionCancelledToast}</span>
+          <button
+            onClick={handleUndoCancel}
+            className="text-sm font-semibold text-amber-300 px-3 py-1.5 rounded-full hover:bg-white/10"
+          >
+            {t.undo}
+          </button>
+        </div>
+      )}
 
       {/* Add ad hoc session modal */}
       <Modal open={addModal} onClose={() => setAddModal(false)} title={t.adhocLabel}>
