@@ -91,6 +91,7 @@ export const Calendar = () => {
               const isToday = dateStr === today
               const isSelected = dateStr === selectedDate
               const daySessions = dayMap[dateStr] ?? []
+              const activeSessions = daySessions.filter(s => s.status !== 'cancelled')
               const holLabel = getHolidayLabel(dateStr)
               const isHol = !!holLabel && isCurrentMonth
               const hasContent = (daySessions.length > 0 || isHol) && isCurrentMonth
@@ -107,11 +108,16 @@ export const Calendar = () => {
                     {day.getDate()}
                   </span>
                   {hasContent && (
-                    <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center px-0.5">
+                    <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center px-0.5 leading-none">
                       {isHol && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'white' : '#f87171' }} />}
-                      {daySessions.filter(s => s.status !== 'cancelled').slice(0, 2).map(s => (
+                      {activeSessions.slice(0, 3).map(s => (
                         <div key={s.id} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'white' : getClientColor(s.clientId) }} />
                       ))}
+                      {activeSessions.length > 3 && (
+                        <span className={`text-[9px] font-semibold leading-none ${isSelected ? 'text-white' : 'text-slate-400'}`}>
+                          +{activeSessions.length - 3}
+                        </span>
+                      )}
                     </div>
                   )}
                 </button>

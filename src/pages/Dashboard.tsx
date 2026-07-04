@@ -176,7 +176,7 @@ export const Dashboard = () => {
             {clientMonthly.map(({ client, completed, scheduled, earned }, i) => {
               const idx = clients.indexOf(client)
               return (
-                <Link key={client.id} to={`/clients/${client.id}`}>
+                <Link key={client.id} to={`/clients/${client.id}?month=${selectedMonth}`}>
                   <div className={`flex items-center gap-3 px-4 py-3.5 ${i < clientMonthly.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}>
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CLIENT_COLORS[idx % CLIENT_COLORS.length] }} />
                     <div className="flex-1 min-w-0">
