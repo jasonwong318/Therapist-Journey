@@ -8,6 +8,9 @@ export interface ScheduleSlot {
   duration: SessionDuration
   startDate?: string // YYYY-MM-DD, generate sessions from this date onwards
   endDate?: string   // YYYY-MM-DD, stop generating after this date
+  // Repeat every N weeks (1 = weekly, 2 = biweekly, 4 = four-weekly).
+  // For N > 1 the cycle is anchored on startDate — set it to pick which week.
+  intervalWeeks?: 1 | 2 | 4
 }
 
 // A rate that applies to sessions on/after `from` (YYYY-MM-DD).
@@ -73,6 +76,7 @@ export interface AppSettings {
   githubToken?: string     // GitHub personal access token (gist scope) for cloud backup
   githubGistId?: string    // gist id used for backup (created on first backup)
   autoBackup?: boolean     // auto-backup to gist (debounced) whenever data changes
+  backupPassphrase?: string // when set, gist backups are AES-GCM encrypted with this passphrase
 }
 
 export interface Holiday {

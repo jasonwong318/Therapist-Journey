@@ -117,9 +117,17 @@ export const ClientForm = () => {
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Select label={t.duration} value={slot.duration} onChange={e => updateSlot(i, { duration: Number(e.target.value) as SessionDuration })}>
+                    <option value={0.5}>{t.halfHour}</option>
                     <option value={1}>{t.oneHour}</option>
                     <option value={1.5}>{t.oneHalfHour}</option>
                     <option value={2}>{t.twoHours}</option>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Select label={t.frequency} value={slot.intervalWeeks ?? 1} onChange={e => updateSlot(i, { intervalWeeks: Number(e.target.value) as 1 | 2 | 4 })}>
+                    <option value={1}>{t.everyWeek}</option>
+                    <option value={2}>{t.everyTwoWeeks}</option>
+                    <option value={4}>{t.everyFourWeeks}</option>
                   </Select>
                 </div>
                 <button onClick={() => removeSlot(i)} aria-label="Remove slot" className="mt-5 p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
@@ -132,6 +140,9 @@ export const ClientForm = () => {
                 <Input label={t.slotStartDate} type="date" value={slot.startDate ?? ''} onChange={e => updateSlot(i, { startDate: e.target.value || undefined })} />
                 <Input label={t.slotEndDate} type="date" value={slot.endDate ?? ''} onChange={e => updateSlot(i, { endDate: e.target.value || undefined })} />
               </div>
+              {(slot.intervalWeeks ?? 1) > 1 && !slot.startDate && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">{t.intervalAnchorHint}</p>
+              )}
             </div>
           ))}
         </div>

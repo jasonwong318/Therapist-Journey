@@ -7,7 +7,7 @@ import {
   loadSettings, saveSettings,
   loadHolidays, saveHolidays,
 } from '../lib/storage'
-import { generateSessionsForMonth } from '../lib/schedule'
+import { generateSessionsForMonth, isDateInSlotCycle } from '../lib/schedule'
 import { backupToGist, setLastBackup } from '../lib/gistBackup'
 import { isBillable, billableTotal } from '../lib/billing'
 import { sessionCost } from '../lib/rates'
@@ -65,10 +65,10 @@ export const useStore = () => {
       skipAutoBackup.current = false
       return
     }
-    const { autoBackup, githubToken, githubGistId } = settings
+    const { autoBackup, githubToken, githubGistId, backupPassphrase } = settings
     if (!autoBackup || !githubToken || !githubGistId) return
     const timer = setTimeout(() => {
-      backupToGist(githubToken, githubGistId)
+      backupToGist(githubToken, githubGistId, backupPassphrase || undefined)
         .then(() => setLastBackup())
         .catch(() => { /* silent — next change retries; manual backup reports errors */ })
     }, 30_000)
@@ -138,6 +138,7 @@ export const useStore = () => {
         if (slot.time !== s.startTime) return false
         if (slot.startDate && s.date < slot.startDate) return false
         if (slot.endDate && s.date > slot.endDate) return false
+        if (!isDateInSlotCycle(slot, s.date)) return false
         const day = new Date(s.date + 'T00:00:00').getDay()
         return day === slot.dayOfWeek
       })

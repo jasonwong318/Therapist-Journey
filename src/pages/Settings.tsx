@@ -5,8 +5,9 @@ import { Card } from '../components/ui/Card'
 import { Input, TextArea } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { exportData, importData } from '../lib/storage'
-import { backupToGist, restoreFromGist, setLastBackup, getLastBackup } from '../lib/gistBackup'
+import { backupToGist, restoreFromGist, setLastBackup, getLastBackup, listGistRevisions, BackupNeedsPassphraseError, BackupDecryptError, type GistRevision } from '../lib/gistBackup'
 import { hasPin, setPin, verifyPin, clearPin } from '../lib/appLock'
+import { buildYearCSV, downloadCSV } from '../lib/report'
 import { t } from '../lib/i18n'
 import { formatDisplay } from '../lib/dates'
 
@@ -19,6 +20,8 @@ export const Settings = () => {
   const [pauseRange, setPauseRange] = useState({ start: '', end: '' })
   const [pinEnabled, setPinEnabled] = useState(() => hasPin())
   const [pinFields, setPinFields] = useState({ current: '', next: '', confirm: '' })
+  const [revisions, setRevisions] = useState<GistRevision[] | null>(null)
+  const [reportYear, setReportYear] = useState(() => String(new Date().getFullYear()))
 
   const resetPinFields = () => setPinFields({ current: '', next: '', confirm: '' })
 
@@ -104,12 +107,26 @@ export const Settings = () => {
     setTimeout(() => setBackupState('idle'), 3000)
   }
 
-  const handleCloudRestore = async () => {
+  const handleCloudRestore = async (revision?: string) => {
     if (!form.githubToken || !form.githubGistId) return
     setBackupState('busy')
     try {
       // Fetch first so the confirm dialog can show what would be overwritten.
-      const data = await restoreFromGist(form.githubToken, form.githubGistId) as Parameters<typeof importData>[0]
+      // Encrypted backups use the saved passphrase; prompt if it's missing/wrong.
+      let data: Parameters<typeof importData>[0]
+      try {
+        data = await restoreFromGist(form.githubToken, form.githubGistId,
+          { passphrase: form.backupPassphrase || undefined, revision }) as Parameters<typeof importData>[0]
+      } catch (e) {
+        if (e instanceof BackupNeedsPassphraseError || e instanceof BackupDecryptError) {
+          const entered = window.prompt(t.enterBackupPassphrase)
+          if (!entered) { setBackupState('idle'); return }
+          data = await restoreFromGist(form.githubToken, form.githubGistId,
+            { passphrase: entered, revision }) as Parameters<typeof importData>[0]
+        } else {
+          throw e
+        }
+      }
       const diff = t.restoreDiff(
         {
           clients: data.clients?.length ?? 0,
@@ -131,6 +148,23 @@ export const Settings = () => {
       setTimeout(() => setBackupState('idle'), 3000)
     }
   }
+
+  const handleShowHistory = async () => {
+    if (!form.githubToken || !form.githubGistId) return
+    try {
+      setRevisions(await listGistRevisions(form.githubToken, form.githubGistId))
+    } catch {
+      alert(t.restoreFailed)
+    }
+  }
+
+  const handleExportCSV = () => {
+    const year = Number(reportYear)
+    const csv = buildYearCSV(year, clients, sessions, invoices, form.currency || 'HKD')
+    downloadCSV(csv, `therapy-income-${year}.csv`)
+  }
+
+  const dataYears = [...new Set(sessions.map(s => s.date.slice(0, 4)))].sort().reverse()
 
   const handleBulkPause = () => {
     const { start, end } = pauseRange
@@ -271,12 +305,14 @@ export const Settings = () => {
           <div className="space-y-4">
             <Input label={t.githubTokenLabel} type="password" placeholder="ghp_..." {...field('githubToken')} />
             <p className="text-xs text-slate-400">{t.githubTokenHint}</p>
+            <Input label={t.backupPassphraseLabel} type="password" {...field('backupPassphrase')} />
+            <p className="text-xs text-slate-400">{t.backupPassphraseHint}</p>
             <div className="flex gap-2">
               <Button fullWidth onClick={handleCloudBackup} disabled={!form.githubToken || backupState === 'busy'}>
                 {backupState === 'busy' ? t.backingUp : backupState === 'ok' ? t.backupSuccess : backupState === 'fail' ? t.backupFailed : t.backupNow}
               </Button>
               {form.githubGistId && (
-                <Button fullWidth variant="secondary" onClick={handleCloudRestore} disabled={!form.githubToken || backupState === 'busy'}>
+                <Button fullWidth variant="secondary" onClick={() => void handleCloudRestore()} disabled={!form.githubToken || backupState === 'busy'}>
                   {t.restoreFromCloud}
                 </Button>
               )}
@@ -297,6 +333,33 @@ export const Settings = () => {
             <p className="text-xs text-slate-400 text-center">
               {lastBackup ? t.lastBackup(formatDisplay(lastBackup.slice(0, 10))) : t.neverBackedUp}
             </p>
+            {form.githubGistId && (
+              revisions === null ? (
+                <button onClick={() => void handleShowHistory()} className="w-full text-center text-xs text-[#635BFF] font-medium py-1">
+                  {t.backupHistory}
+                </button>
+              ) : revisions.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center">{t.noBackupHistory}</p>
+              ) : (
+                <div className="border-t border-slate-100 dark:border-slate-700 pt-2 space-y-1">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t.backupHistory}</p>
+                  {revisions.map(rev => (
+                    <div key={rev.version} className="flex items-center justify-between py-1">
+                      <span className="text-xs text-slate-600 dark:text-slate-300">
+                        {new Date(rev.committedAt).toLocaleString()}
+                      </span>
+                      <button
+                        onClick={() => void handleCloudRestore(rev.version)}
+                        disabled={backupState === 'busy'}
+                        className="text-xs text-[#635BFF] border border-[#635BFF] px-2 py-0.5 rounded-lg font-medium"
+                      >
+                        {t.restoreThisVersion}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
           </div>
         </Card>
       </div>
@@ -355,6 +418,26 @@ export const Settings = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
               </svg>
             </button>
+            {dataYears.length > 0 && (
+              <>
+                <div className={dividerCls} />
+                <div className="flex items-center justify-between py-2.5 gap-3">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.annualReport}</span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 dark:text-slate-100"
+                      value={reportYear}
+                      onChange={e => setReportYear(e.target.value)}
+                    >
+                      {dataYears.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    <button onClick={handleExportCSV} className="text-sm text-[#635BFF] font-medium">
+                      {t.exportCSV}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </Card>
       </div>

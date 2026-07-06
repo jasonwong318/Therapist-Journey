@@ -63,4 +63,21 @@ describe('generateSessionsForMonth', () => {
     const out = generateSessionsForMonth([client({ archivedAt: '2026-01-01' })], [], JULY.year, JULY.month)
     expect(out).toHaveLength(0)
   })
+
+  it('biweekly slots anchored on startDate skip alternate weeks', () => {
+    const c = client({ schedule: [{ dayOfWeek: 1, time: '10:00', duration: 1, intervalWeeks: 2, startDate: '2026-07-06' }] })
+    const out = generateSessionsForMonth([c], [], JULY.year, JULY.month)
+    expect(out.map(s => s.date)).toEqual(['2026-07-06', '2026-07-20'])
+    // and the cycle continues correctly into the next month (Aug Mondays: 3,10,17,24,31)
+    const aug = generateSessionsForMonth([c], out, 2026, 7)
+    expect(aug.map(s => s.date)).toEqual(['2026-08-03', '2026-08-17', '2026-08-31'])
+  })
+
+  it('four-weekly slots occur once per four weeks', () => {
+    const c = client({ schedule: [{ dayOfWeek: 1, time: '10:00', duration: 1, intervalWeeks: 4, startDate: '2026-07-06' }] })
+    const jul = generateSessionsForMonth([c], [], JULY.year, JULY.month)
+    const aug = generateSessionsForMonth([c], jul, 2026, 7)
+    expect(jul.map(s => s.date)).toEqual(['2026-07-06'])
+    expect(aug.map(s => s.date)).toEqual(['2026-08-03', '2026-08-31'])
+  })
 })

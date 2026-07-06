@@ -26,11 +26,7 @@
 
 ### A. 錢相關（推薦優先）
 
-**A1. 年度收入報表 / CSV 匯出**（報稅用）
-- Settings 或 Dashboard 加「匯出年度報表」：揀年份 → 下載 CSV
-- 欄位：日期、客人、時長、時薪、金額、狀態、發票號碼、已付/未付
-- 實作提示：純 client-side，`Blob` + `a.download`；重用 `sessionCost()`/`isBillable()`
-- 順手加：年度總結行（總堂數、總時數、總收入、已收/未收）
+**A1. 年度收入報表 / CSV 匯出** — ✅ 已完成（Settings → 資料管理 → 年度收入報表，`lib/report.ts`）
 
 **A2. 每客欠款累計視圖**
 - Clients 列表每個客人卡片顯示「未付 $X（N 張發票）」
@@ -50,10 +46,8 @@
 
 ### B. 排課相關
 
-**B1. 隔週 / 自訂頻率循環時段**
-- `ScheduleSlot` 加 `frequency?: 1 | 2`（每週/隔週）+ `anchorDate`（隔週由邊個星期起計）
-- `schedule.ts` 生成時按 anchor 計 week parity；tests 要加
-- UI：ClientForm slot 加頻率 select
+**B1. 隔週 / 每四週循環時段** — ✅ 已完成（`ScheduleSlot.intervalWeeks: 1|2|4`，anchor 用 slot startDate，
+`isDateInSlotCycle()` in schedule.ts，有 tests）
 
 **B2. iCal 匯出**
 - 生成 `.ics` 檔（VEVENT per scheduled session，未來 3 個月）俾手機日曆 import
@@ -61,14 +55,11 @@
 
 ### C. 備份/資料
 
-**C1. Gist 備份版本歷史還原**
-- Gist 本身有 revision history（GET /gists/:id/commits）
-- Settings 列出最近 N 個版本（日期+大小），揀一個還原
-- 配合已有嘅 restore diff preview
+**C1. Gist 備份版本歷史還原** — ✅ 已完成（Settings 雲端備份卡「檢視備份歷史」，`listGistRevisions()`）
 
-**C2. Gist 內容加密**（舊 todo）
-- WebCrypto AES-GCM，密碼由用戶設（唔存 plaintext）；要諗忘記密碼 = 備份廢
-- 同 C1 有交互（加密後 diff preview 要先解密）
+**C2. Gist 內容加密** — ✅ 已完成（`lib/cryptoBackup.ts`，AES-GCM + PBKDF2；
+密碼存喺本機 settings（`backupPassphrase`），日常備份無感；新裝置還原會 prompt 輸入。
+注意：密碼唔會上傳，忘記 = 加密備份廢）
 
 **C3. 遷移 IndexedDB**（工程投資，唔急但值得）
 - localStorage → IndexedDB（容量大、唔會 sync 阻塞、更耐清）

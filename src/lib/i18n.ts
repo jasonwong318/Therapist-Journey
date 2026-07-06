@@ -52,6 +52,10 @@ type Translations = {
   enableLock: string; disableLock: string; changePin: string
   pinTooShort: string; pinMismatch: string; pinWrong: string; pinSet: string; pinLockWarning: string
   storageWriteFailed: string
+  frequency: string; everyWeek: string; everyTwoWeeks: string; everyFourWeeks: string; intervalAnchorHint: string
+  backupPassphraseLabel: string; backupPassphraseHint: string; enterBackupPassphrase: string
+  backupHistory: string; noBackupHistory: string; restoreThisVersion: string
+  annualReport: string; exportCSV: string
   bulkPauseTitle: string; bulkPauseHint: string; applyBulkPause: string; clearAllPauses: string
   bulkPauseApplied: (n: number) => string; bulkPauseCleared: (n: number) => string; bulkPauseInvalid: string
   autoBackupLabel: string; autoBackupHint: string
@@ -139,6 +143,13 @@ const zh: Translations = {
   pinWrong: 'PIN 錯誤。', pinSet: '✓ PIN 已設定！',
   pinLockWarning: '注意：如果忘記 PIN 將無法進入 app（資料仍在裝置上）。請確保已備份資料。',
   storageWriteFailed: '⚠️ 儲存失敗！裝置儲存空間可能已滿，最新改動未能保存。請立即清理空間並備份資料。',
+  frequency: '頻率', everyWeek: '每週', everyTwoWeeks: '隔週', everyFourWeeks: '每四週',
+  intervalAnchorHint: '隔週／每四週時段請設定「開始日期」，以指定由邊一個星期開始計。',
+  backupPassphraseLabel: '備份加密密碼（選填）',
+  backupPassphraseHint: '設定後備份會先加密才上傳到 GitHub。密碼儲存在本機，日常備份無需再輸入；在新裝置還原時需輸入相同密碼。請自行記住此密碼。',
+  enterBackupPassphrase: '此備份已加密，請輸入備份加密密碼：',
+  backupHistory: '檢視備份歷史', noBackupHistory: '沒有備份紀錄。', restoreThisVersion: '還原此版本',
+  annualReport: '年度收入報表', exportCSV: '匯出 CSV',
   bulkPauseTitle: '批量暫停排課（如暑假）',
   bulkPauseHint: '一次過為所有客人設定相同的暫停日期，期間不會自動排課，期後自動回復。個別客人可在其編輯頁面另行調整。',
   applyBulkPause: '套用至所有客人', clearAllPauses: '清除所有暫停',
@@ -231,6 +242,13 @@ const en: Translations = {
   pinWrong: 'Wrong PIN.', pinSet: '✓ PIN set!',
   pinLockWarning: 'Note: if you forget the PIN you cannot enter the app (data stays on device). Make sure you have a backup.',
   storageWriteFailed: '⚠️ Save failed! Device storage may be full — your latest change was NOT saved. Free up space and back up now.',
+  frequency: 'Repeat', everyWeek: 'Weekly', everyTwoWeeks: 'Biweekly', everyFourWeeks: 'Every 4 weeks',
+  intervalAnchorHint: 'For biweekly / 4-weekly slots, set a Start Date to pick which week the cycle starts on.',
+  backupPassphraseLabel: 'Backup encryption passphrase (optional)',
+  backupPassphraseHint: 'When set, backups are encrypted before uploading to GitHub. Stored locally so daily backups stay seamless; restoring on a new device requires the same passphrase. Keep it somewhere safe.',
+  enterBackupPassphrase: 'This backup is encrypted. Enter the backup passphrase:',
+  backupHistory: 'View backup history', noBackupHistory: 'No backup history.', restoreThisVersion: 'Restore',
+  annualReport: 'Annual Income Report', exportCSV: 'Export CSV',
   bulkPauseTitle: 'Bulk Pause Scheduling (e.g. summer break)',
   bulkPauseHint: 'Set the same pause period for all clients at once. No sessions are auto-scheduled during the period; the schedule resumes afterwards. Individual clients can be adjusted on their edit page.',
   applyBulkPause: 'Apply to All Clients', clearAllPauses: 'Clear All Pauses',
@@ -245,10 +263,13 @@ const en: Translations = {
 
 export type Lang = 'zh' | 'en'
 
-const stored = localStorage.getItem('tt_lang') as Lang | null
-export let t: Translations = (stored === 'en') ? en : zh
+// Guarded so pure-logic modules importing t stay testable outside the browser.
+const storedLang = (): Lang | null =>
+  typeof localStorage === 'undefined' ? null : (localStorage.getItem('tt_lang') as Lang | null)
 
-export const getLang = (): Lang => (localStorage.getItem('tt_lang') as Lang) ?? 'zh'
+export let t: Translations = (storedLang() === 'en') ? en : zh
+
+export const getLang = (): Lang => storedLang() ?? 'zh'
 
 export const setLang = (lang: Lang) => {
   t = lang === 'en' ? en : zh
