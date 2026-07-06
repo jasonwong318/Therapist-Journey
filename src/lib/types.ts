@@ -10,12 +10,21 @@ export interface ScheduleSlot {
   endDate?: string   // YYYY-MM-DD, stop generating after this date
 }
 
+// A rate that applies to sessions on/after `from` (YYYY-MM-DD).
+export interface RateEntry {
+  from: string
+  rate: number
+}
+
 export interface Client {
   id: string
   name: string
   color: string
   phone?: string // for WhatsApp, e.g. "85291234567"
-  hourlyRate: number
+  hourlyRate: number // current rate; per-date billing uses rateHistory via rateOn()
+  // Past rate changes. Absent for clients whose rate never changed —
+  // rateOn() then falls back to hourlyRate for all dates.
+  rateHistory?: RateEntry[]
   defaultDuration: SessionDuration
   schedule: ScheduleSlot[]
   // Temporarily pause auto-scheduling (e.g. summer break); sessions are not

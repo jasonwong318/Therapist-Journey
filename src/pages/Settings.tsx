@@ -6,6 +6,7 @@ import { Input, TextArea } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { exportData, importData } from '../lib/storage'
 import { backupToGist, restoreFromGist, setLastBackup, getLastBackup } from '../lib/gistBackup'
+import { hasPin, setPin, verifyPin, clearPin } from '../lib/appLock'
 import { t } from '../lib/i18n'
 import { formatDisplay } from '../lib/dates'
 
@@ -16,6 +17,35 @@ export const Settings = () => {
   const [saved, setSaved] = useState(false)
   const [backupState, setBackupState] = useState<'idle' | 'busy' | 'ok' | 'fail'>('idle')
   const [pauseRange, setPauseRange] = useState({ start: '', end: '' })
+  const [pinEnabled, setPinEnabled] = useState(() => hasPin())
+  const [pinFields, setPinFields] = useState({ current: '', next: '', confirm: '' })
+
+  const resetPinFields = () => setPinFields({ current: '', next: '', confirm: '' })
+
+  const handleEnablePin = async () => {
+    if (pinFields.next.length < 4) { alert(t.pinTooShort); return }
+    if (pinFields.next !== pinFields.confirm) { alert(t.pinMismatch); return }
+    await setPin(pinFields.next)
+    setPinEnabled(true)
+    resetPinFields()
+    alert(t.pinSet)
+  }
+
+  const handleChangePin = async () => {
+    if (!(await verifyPin(pinFields.current))) { alert(t.pinWrong); return }
+    if (pinFields.next.length < 4) { alert(t.pinTooShort); return }
+    if (pinFields.next !== pinFields.confirm) { alert(t.pinMismatch); return }
+    await setPin(pinFields.next)
+    resetPinFields()
+    alert(t.pinSet)
+  }
+
+  const handleDisablePin = async () => {
+    if (!(await verifyPin(pinFields.current))) { alert(t.pinWrong); return }
+    clearPin()
+    setPinEnabled(false)
+    resetPinFields()
+  }
 
   const handleSave = () => {
     setSettings({ ...form, nextInvoiceNumber: Math.max(1, Number(form.nextInvoiceNumber) || 1) })
@@ -267,6 +297,43 @@ export const Settings = () => {
             <p className="text-xs text-slate-400 text-center">
               {lastBackup ? t.lastBackup(formatDisplay(lastBackup.slice(0, 10))) : t.neverBackedUp}
             </p>
+          </div>
+        </Card>
+      </div>
+
+      <div>
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t.appLock}</h2>
+        <Card>
+          <div className="space-y-3">
+            {pinEnabled ? (
+              <>
+                <Input label={t.currentPinLabel} type="password" inputMode="numeric" value={pinFields.current}
+                  onChange={e => setPinFields(f => ({ ...f, current: e.target.value }))} />
+                <Input label={t.newPinLabel} type="password" inputMode="numeric" value={pinFields.next}
+                  onChange={e => setPinFields(f => ({ ...f, next: e.target.value }))} />
+                <Input label={t.confirmPinLabel} type="password" inputMode="numeric" value={pinFields.confirm}
+                  onChange={e => setPinFields(f => ({ ...f, confirm: e.target.value }))} />
+                <div className="flex gap-2">
+                  <Button fullWidth onClick={() => void handleChangePin()} disabled={!pinFields.current || !pinFields.next}>
+                    {t.changePin}
+                  </Button>
+                  <Button fullWidth variant="secondary" onClick={() => void handleDisablePin()} disabled={!pinFields.current}>
+                    {t.disableLock}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Input label={t.newPinLabel} type="password" inputMode="numeric" value={pinFields.next}
+                  onChange={e => setPinFields(f => ({ ...f, next: e.target.value }))} />
+                <Input label={t.confirmPinLabel} type="password" inputMode="numeric" value={pinFields.confirm}
+                  onChange={e => setPinFields(f => ({ ...f, confirm: e.target.value }))} />
+                <Button fullWidth onClick={() => void handleEnablePin()} disabled={!pinFields.next}>
+                  {t.enableLock}
+                </Button>
+              </>
+            )}
+            <p className="text-xs text-slate-400">{t.pinLockWarning}</p>
           </div>
         </Card>
       </div>

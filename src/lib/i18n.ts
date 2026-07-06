@@ -46,6 +46,12 @@ type Translations = {
   yearOverview: string
   rescheduleHint: string; swipeToCancelHint: string
   sessionCancelledToast: string; undo: string
+  rateEffectiveFrom: string; rateChangeHint: string
+  appLock: string; enterPin: string; unlock: string
+  newPinLabel: string; confirmPinLabel: string; currentPinLabel: string
+  enableLock: string; disableLock: string; changePin: string
+  pinTooShort: string; pinMismatch: string; pinWrong: string; pinSet: string; pinLockWarning: string
+  storageWriteFailed: string
   bulkPauseTitle: string; bulkPauseHint: string; applyBulkPause: string; clearAllPauses: string
   bulkPauseApplied: (n: number) => string; bulkPauseCleared: (n: number) => string; bulkPauseInvalid: string
   autoBackupLabel: string; autoBackupHint: string
@@ -124,6 +130,15 @@ const zh: Translations = {
   rescheduleHint: '儲存後，原本課堂會標記為「已改期」，並會喺上面揀選嘅新日期自動新增一堂。',
   swipeToCancelHint: '提示：課堂向左滑可快速取消',
   sessionCancelledToast: '已取消課堂', undo: '復原',
+  rateEffectiveFrom: '新時薪生效日期',
+  rateChangeHint: '生效日之前的課堂維持舊時薪計算，之後的課堂按新時薪計算。',
+  appLock: '應用程式鎖（PIN）', enterPin: '請輸入 PIN 解鎖', unlock: '解鎖',
+  newPinLabel: '新 PIN（4 位或以上數字）', confirmPinLabel: '確認新 PIN', currentPinLabel: '目前 PIN',
+  enableLock: '啟用 PIN 鎖', disableLock: '停用', changePin: '更改 PIN',
+  pinTooShort: 'PIN 需最少 4 位數字。', pinMismatch: '兩次輸入的 PIN 不一致。',
+  pinWrong: 'PIN 錯誤。', pinSet: '✓ PIN 已設定！',
+  pinLockWarning: '注意：如果忘記 PIN 將無法進入 app（資料仍在裝置上）。請確保已備份資料。',
+  storageWriteFailed: '⚠️ 儲存失敗！裝置儲存空間可能已滿，最新改動未能保存。請立即清理空間並備份資料。',
   bulkPauseTitle: '批量暫停排課（如暑假）',
   bulkPauseHint: '一次過為所有客人設定相同的暫停日期，期間不會自動排課，期後自動回復。個別客人可在其編輯頁面另行調整。',
   applyBulkPause: '套用至所有客人', clearAllPauses: '清除所有暫停',
@@ -207,6 +222,15 @@ const en: Translations = {
   rescheduleHint: 'On save, this session is marked "Rescheduled" and a new session is added on the date chosen above.',
   swipeToCancelHint: 'Tip: swipe a session left to cancel it',
   sessionCancelledToast: 'Session cancelled', undo: 'Undo',
+  rateEffectiveFrom: 'New rate effective from',
+  rateChangeHint: 'Sessions before this date keep the old rate; sessions on/after it bill at the new rate.',
+  appLock: 'App Lock (PIN)', enterPin: 'Enter PIN to unlock', unlock: 'Unlock',
+  newPinLabel: 'New PIN (4+ digits)', confirmPinLabel: 'Confirm new PIN', currentPinLabel: 'Current PIN',
+  enableLock: 'Enable PIN Lock', disableLock: 'Disable', changePin: 'Change PIN',
+  pinTooShort: 'PIN must be at least 4 digits.', pinMismatch: 'PINs do not match.',
+  pinWrong: 'Wrong PIN.', pinSet: '✓ PIN set!',
+  pinLockWarning: 'Note: if you forget the PIN you cannot enter the app (data stays on device). Make sure you have a backup.',
+  storageWriteFailed: '⚠️ Save failed! Device storage may be full — your latest change was NOT saved. Free up space and back up now.',
   bulkPauseTitle: 'Bulk Pause Scheduling (e.g. summer break)',
   bulkPauseHint: 'Set the same pause period for all clients at once. No sessions are auto-scheduled during the period; the schedule resumes afterwards. Individual clients can be adjusted on their edit page.',
   applyBulkPause: 'Apply to All Clients', clearAllPauses: 'Clear All Pauses',

@@ -3,7 +3,7 @@ import { useStoreCtx } from '../hooks/StoreContext'
 import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { Button } from '../components/ui/Button'
-import { calendarWeeks, toDateStr, formatDisplay, getMonth } from '../lib/dates'
+import { calendarWeeks, toDateStr, formatDisplay, getMonth, timesOverlap } from '../lib/dates'
 import { getHKHolidayLabel } from '../lib/hkHolidays'
 import { CLIENT_COLORS } from '../lib/constants'
 import type { Session, SessionStatus, SessionDuration } from '../lib/types'
@@ -209,7 +209,8 @@ export const Calendar = () => {
           </div>
           <Button fullWidth disabled={!newSession.clientId || !selectedDate} onClick={() => {
             if (!newSession.clientId || !selectedDate) return
-            const conflict = sessions.some(s => s.date === selectedDate && s.startTime === newSession.startTime && s.status === 'scheduled')
+            const conflict = sessions.some(s => s.date === selectedDate && s.status === 'scheduled'
+              && timesOverlap(s.startTime, s.duration, newSession.startTime, newSession.duration))
             if (conflict && !window.confirm(t.conflictWarning)) return
             addSession({ clientId: newSession.clientId, date: selectedDate, startTime: newSession.startTime, duration: newSession.duration, status: 'scheduled', notes: '', isRecurring: false })
             setAddSessionModal(false)

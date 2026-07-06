@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { formatDisplay, formatMonthYear, endTimeOf } from '../lib/dates'
 import { isBillable } from '../lib/billing'
+import { sessionCost } from '../lib/rates'
 import { generateInvoicePDF } from '../lib/invoice'
 import { t, getLang } from '../lib/i18n'
 
@@ -19,7 +20,7 @@ export const InvoiceDetail = () => {
 
   const invSessions = sessions.filter(s => invoice.sessionIds.includes(s.id)).sort((a, b) => a.date.localeCompare(b.date))
   const billableSessions = invSessions.filter(isBillable)
-  const displayTotal = billableSessions.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+  const displayTotal = billableSessions.reduce((sum, s) => sum + sessionCost(client, s), 0)
   const cur = settings.currency
 
   const handleDownload = () => generateInvoicePDF(invoice, client, billableSessions, settings)
@@ -33,7 +34,7 @@ export const InvoiceDetail = () => {
       zh ? `發票號碼：${invoice.invoiceNumber}` : `Invoice No: ${invoice.invoiceNumber}`,
       ``,
       ...billableSessions.map(s =>
-        `${formatDisplay(s.date)}  ${s.startTime}–${endTimeOf(s.startTime, s.duration)}  ${cur}${(client.hourlyRate * s.duration).toLocaleString()}`
+        `${formatDisplay(s.date)}  ${s.startTime}–${endTimeOf(s.startTime, s.duration)}  ${cur}${sessionCost(client, s).toLocaleString()}`
       ),
       ``,
       zh ? `總計：${cur} ${displayTotal.toLocaleString()}` : `Total: ${cur} ${displayTotal.toLocaleString()}`,
@@ -88,7 +89,7 @@ export const InvoiceDetail = () => {
                 <p className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{s.startTime}–{endTimeOf(s.startTime, s.duration)}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 text-center">{billable ? `1${t.sessions}` : '–'}</p>
                 <p className={`text-sm font-semibold text-right whitespace-nowrap ${billable ? 'text-slate-900 dark:text-slate-100' : 'text-slate-300 dark:text-slate-600'}`}>
-                  {billable ? (client.hourlyRate * s.duration).toLocaleString() : t.statusLabels[s.status]}
+                  {billable ? sessionCost(client, s).toLocaleString() : t.statusLabels[s.status]}
                 </p>
               </div>
             )

@@ -5,6 +5,7 @@ import { Badge } from '../components/ui/Badge'
 import { todayStr, currentMonth, isInMonth, monthSelectorOptions } from '../lib/dates'
 import { CLIENT_COLORS } from '../lib/constants'
 import { isBillable } from '../lib/billing'
+import { sessionCost } from '../lib/rates'
 import { getLastBackup } from '../lib/gistBackup'
 import { Link } from 'react-router-dom'
 import { t, getLang } from '../lib/i18n'
@@ -25,7 +26,7 @@ export const Dashboard = () => {
 
   const sumEarnings = (list: typeof sessions) => list.reduce((sum, s) => {
     const client = clients.find(c => c.id === s.clientId)
-    return sum + (client ? client.hourlyRate * s.duration : 0)
+    return sum + (client ? sessionCost(client, s) : 0)
   }, 0)
 
   // Projected income: every session that isn't cancelled/rescheduled (i.e. assume
@@ -42,15 +43,15 @@ export const Dashboard = () => {
     const client = clients.find(c => c.id === inv.clientId)
     if (!client) return sum + inv.totalAmount
     const billable = sessions.filter(s => inv.sessionIds.includes(s.id) && isBillable(s))
-    return sum + billable.reduce((s2, s) => s2 + client.hourlyRate * s.duration, 0)
+    return sum + billable.reduce((s2, s) => s2 + sessionCost(client, s), 0)
   }, 0)
 
   const clientMonthly = clients.filter(c => !c.archivedAt).map(client => {
     const completed = sessions.filter(s => s.clientId === client.id && isInMonth(s.date, selectedMonth) && s.status === 'completed')
     const scheduled = sessions.filter(s => s.clientId === client.id && isInMonth(s.date, selectedMonth) && s.status === 'scheduled')
     const earned = isFuture
-      ? sessions.filter(s => s.clientId === client.id && isInMonth(s.date, selectedMonth) && s.status !== 'cancelled').reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
-      : completed.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+      ? sessions.filter(s => s.clientId === client.id && isInMonth(s.date, selectedMonth) && s.status !== 'cancelled').reduce((sum, s) => sum + sessionCost(client, s), 0)
+      : completed.reduce((sum, s) => sum + sessionCost(client, s), 0)
     return { client, completed: completed.length, scheduled: scheduled.length, earned }
   }).filter(x => x.completed > 0 || x.scheduled > 0)
 
@@ -60,7 +61,7 @@ export const Dashboard = () => {
     const ym = `${year}-${String(i + 1).padStart(2, '0')}`
     const earned = sessions.filter(s => isInMonth(s.date, ym) && s.status === 'completed').reduce((sum, s) => {
       const client = clients.find(c => c.id === s.clientId)
-      return sum + (client ? client.hourlyRate * s.duration : 0)
+      return sum + (client ? sessionCost(client, s) : 0)
     }, 0)
     return { ym, label: t.monthNames[i], earned }
   }).filter(m => m.earned > 0)
@@ -155,7 +156,7 @@ export const Dashboard = () => {
                       <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: CLIENT_COLORS[idx % CLIENT_COLORS.length] }} />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-900 dark:text-slate-100 text-sm">{client.name}</p>
-                        <p className="text-xs text-slate-400">{session.startTime} · {t.hrs(session.duration)} · {cur} {(client.hourlyRate * session.duration).toLocaleString()}</p>
+                        <p className="text-xs text-slate-400">{session.startTime} · {t.hrs(session.duration)} · {cur} {sessionCost(client, session).toLocaleString()}</p>
                       </div>
                       <Badge color={session.status === 'completed' ? 'green' : 'indigo'}>
                         {session.status === 'completed' ? t.done : t.upcoming}

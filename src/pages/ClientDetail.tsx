@@ -1,13 +1,14 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStoreCtx } from '../hooks/StoreContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
-import { formatDisplayWithDay, currentMonth, isInMonth, formatMonthYear, todayStr, monthSelectorOptions, addDaysStr } from '../lib/dates'
+import { formatDisplayWithDay, currentMonth, isInMonth, formatMonthYear, todayStr, monthSelectorOptions, addDaysStr, timesOverlap } from '../lib/dates'
 import { getHKHolidayLabel } from '../lib/hkHolidays'
 import { billableTotal } from '../lib/billing'
+import { rateOn, sessionCost } from '../lib/rates'
 import { t } from '../lib/i18n'
 import type { Session, SessionStatus, SessionDuration } from '../lib/types'
 
@@ -97,6 +98,7 @@ export const ClientDetail = () => {
   const [newStatus, setNewStatus] = useState<'scheduled' | 'completed'>('completed')
   const [undoCancel, setUndoCancel] = useState<string | null>(null) // session id of last swipe-cancel
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current) }, [])
 
   if (!client) return <div className="p-8 text-center text-slate-400">找不到客人。</div>
 
@@ -106,10 +108,10 @@ export const ClientDetail = () => {
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
 
   const completedSessions = clientSessions.filter(s => s.status === 'completed')
-  const monthTotal = completedSessions.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+  const monthTotal = completedSessions.reduce((sum, s) => sum + sessionCost(client, s), 0)
   // Projected: assume all still-scheduled sessions get attended (exclude cancelled/rescheduled).
   const projectedSessions = clientSessions.filter(s => s.status !== 'cancelled' && s.status !== 'rescheduled')
-  const projectedTotal = projectedSessions.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+  const projectedTotal = projectedSessions.reduce((sum, s) => sum + sessionCost(client, s), 0)
   const uninvoicedSessions = completedSessions.filter(s => !s.invoiceId)
   const monthInvoice = invoices.find(inv => inv.clientId === id && inv.month === selectedMonth)
 
@@ -142,7 +144,7 @@ export const ClientDetail = () => {
     if (isReschedulePending(activeSession)) {
       const targetDate = editDate || addDaysStr(activeSession.date, 7)
       const targetTime = editTime || activeSession.startTime
-      if (hasConflict(targetDate, targetTime) && !window.confirm(t.conflictWarning)) return
+      if (hasConflict(targetDate, targetTime, duration, activeSession.id) && !window.confirm(t.conflictWarning)) return
       updateSession(activeSession.id, { status: 'rescheduled', duration, notes: editNotes })
       addSession({
         clientId: client.id,
@@ -209,8 +211,10 @@ export const ClientDetail = () => {
     if (undoTimer.current) clearTimeout(undoTimer.current)
   }
 
-  const hasConflict = (date: string, time: string) =>
-    sessions.some(s => s.date === date && s.startTime === time && s.status === 'scheduled')
+  // Overlap-based: 10:00–11:30 clashes with a session starting 11:00.
+  const hasConflict = (date: string, time: string, duration: number, excludeId?: string) =>
+    sessions.some(s => s.id !== excludeId && s.date === date && s.status === 'scheduled'
+      && timesOverlap(s.startTime, s.duration, time, duration))
 
   const openAddModal = () => {
     setNewDate(todayStr())
@@ -221,7 +225,7 @@ export const ClientDetail = () => {
   }
 
   const handleAddSession = () => {
-    if (hasConflict(newDate, newTime) && !window.confirm(t.conflictWarning)) return
+    if (hasConflict(newDate, newTime, newDuration) && !window.confirm(t.conflictWarning)) return
     addSession({
       clientId: id!,
       date: newDate,
@@ -262,7 +266,7 @@ export const ClientDetail = () => {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{client.name}</h1>
             {isPaused && <Badge color="orange">{t.pausedTag}</Badge>}
           </div>
-          <p className="text-xs text-slate-400">{cur} {client.hourlyRate}{t.perHour}</p>
+          <p className="text-xs text-slate-400">{cur} {rateOn(client, todayStr())}{t.perHour}</p>
         </div>
         <Link to={`/clients/${id}/edit`}><Button variant="secondary" size="sm">{t.edit}</Button></Link>
       </div>
@@ -367,7 +371,7 @@ export const ClientDetail = () => {
                       {session.notes && <span className="text-xs">📝</span>}
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {session.startTime} · {t.hrs(session.duration)} · {cur} {(client.hourlyRate * session.duration).toLocaleString()}
+                      {session.startTime} · {t.hrs(session.duration)} · {cur} {sessionCost(client, session).toLocaleString()}
                       {!session.isRecurring && <span className="ml-1 text-amber-500">{t.adhocTag}</span>}
                     </p>
                   </div>
@@ -432,7 +436,7 @@ export const ClientDetail = () => {
               </div>
               {editDuration && editDuration !== activeSession.duration && (
                 <p className="text-xs text-[#635BFF] mt-1">
-                  {t.cost}：{cur} {(client.hourlyRate * editDuration).toLocaleString()}
+                  {t.cost}：{cur} {(rateOn(client, editDate || activeSession.date) * editDuration).toLocaleString()}
                 </p>
               )}
             </div>
@@ -565,7 +569,7 @@ export const ClientDetail = () => {
           </div>
           <div className="pt-1">
             <p className="text-xs text-slate-400 mb-3 text-center">
-              {t.cost}：{cur} {(client.hourlyRate * newDuration).toLocaleString()}
+              {t.cost}：{cur} {(rateOn(client, newDate) * newDuration).toLocaleString()}
             </p>
             <Button fullWidth onClick={handleAddSession} disabled={!newDate || !newTime}>
               {t.confirmAddAdhoc}

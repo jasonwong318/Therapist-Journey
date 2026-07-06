@@ -73,6 +73,17 @@ export const monthSelectorOptions = (future = 3, past = 5) => {
   return opts
 }
 
+// Whether two sessions' time ranges overlap (same-day comparison).
+export const timesOverlap = (t1: string, hours1: number, t2: string, hours2: number): boolean => {
+  const mins = (t: string) => {
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
+  const s1 = mins(t1), e1 = s1 + Math.round(hours1 * 60)
+  const s2 = mins(t2), e2 = s2 + Math.round(hours2 * 60)
+  return s1 < e2 && s2 < e1
+}
+
 export const addDaysStr = (dateStr: string, days: number): string => {
   const d = parseISO(dateStr)
   d.setDate(d.getDate() + days)

@@ -3,6 +3,8 @@ import { useStoreCtx } from '../hooks/StoreContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { CLIENT_COLORS } from '../lib/constants'
+import { rateOn } from '../lib/rates'
+import { todayStr } from '../lib/dates'
 import { t } from '../lib/i18n'
 
 export const Clients = () => {
@@ -37,7 +39,7 @@ export const Clients = () => {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-900 dark:text-slate-100">{client.name}</p>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    HKD {client.hourlyRate}{t.perHour} · {t.slotsPerWeek(client.schedule.length)}
+                    HKD {rateOn(client, todayStr())}{t.perHour} · {t.slotsPerWeek(client.schedule.length)}
                   </p>
                 </div>
                 <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

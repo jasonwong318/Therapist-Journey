@@ -9,7 +9,10 @@ import {
 } from '../lib/storage'
 import { generateSessionsForMonth } from '../lib/schedule'
 import { backupToGist, setLastBackup } from '../lib/gistBackup'
-import { isBillable } from '../lib/billing'
+import { isBillable, billableTotal } from '../lib/billing'
+import { sessionCost } from '../lib/rates'
+import { refreshHKHolidays } from '../lib/hkHolidays'
+import { requestPersistentStorage } from '../lib/storage'
 import { todayStr } from '../lib/dates'
 import { nanoid } from '../lib/nanoid'
 
@@ -29,6 +32,8 @@ export const useStore = () => {
   const [holidays, setHolidaysState] = useState<Holiday[]>(() => loadHolidays())
 
   useEffect(() => {
+    requestPersistentStorage()
+    void refreshHKHolidays()
     const months = buildMonthsAhead(6)
     const current = loadClients()
     const existing = loadSessions()
@@ -196,8 +201,7 @@ export const useStore = () => {
         if (client) {
           setInvoices(prevInv => prevInv.map(inv => {
             if (inv.id !== updated.invoiceId) return inv
-            const billable = next.filter(s => inv.sessionIds.includes(s.id) && isBillable(s))
-            const totalAmount = billable.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+            const totalAmount = billableTotal(next.filter(s => inv.sessionIds.includes(s.id)), client)
             return { ...inv, totalAmount }
           }))
         }
@@ -212,9 +216,27 @@ export const useStore = () => {
     return s
   }, [setSessions])
 
+  // Also detaches the session from any invoice it's on and recalculates that
+  // invoice's total, so deletions can't leave dangling ids or stale amounts.
   const deleteSession = useCallback((id: string) => {
-    setSessions(prev => prev.filter(s => s.id !== id))
-  }, [setSessions])
+    setSessionsState(prev => {
+      const victim = prev.find(s => s.id === id)
+      const next = prev.filter(s => s.id !== id)
+      saveSessions(next)
+      if (victim?.invoiceId) {
+        const client = loadClients().find(c => c.id === victim.clientId)
+        setInvoices(prevInv => prevInv.map(inv => {
+          if (inv.id !== victim.invoiceId) return inv
+          const sessionIds = inv.sessionIds.filter(x => x !== id)
+          const totalAmount = client
+            ? billableTotal(next.filter(s => sessionIds.includes(s.id)), client)
+            : inv.totalAmount
+          return { ...inv, sessionIds, totalAmount }
+        }))
+      }
+      return next
+    })
+  }, [setInvoices])
 
   // Cancels every scheduled session on the date (recurring and ad-hoc).
   // Returns how many were cancelled so the UI can report it.
@@ -245,7 +267,7 @@ export const useStore = () => {
     const client = clients.find(c => c.id === clientId)
     if (!client) return null
     const invoiceSessions = sessions.filter(s => sessionIds.includes(s.id) && isBillable(s))
-    const totalAmount = invoiceSessions.reduce((sum, s) => sum + client.hourlyRate * s.duration, 0)
+    const totalAmount = invoiceSessions.reduce((sum, s) => sum + sessionCost(client, s), 0)
     const nextNum = Number(settings.nextInvoiceNumber) || 1
     const invNum = `${settings.invoicePrefix}-${String(nextNum).padStart(4, '0')}`
     const invoice: Invoice = {

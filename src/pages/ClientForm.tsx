@@ -4,6 +4,8 @@ import { useStoreCtx } from '../hooks/StoreContext'
 import { Button } from '../components/ui/Button'
 import { Input, Select, TextArea } from '../components/ui/Input'
 import type { ScheduleSlot, SessionDuration } from '../lib/types'
+import { withRateChange } from '../lib/rates'
+import { todayStr } from '../lib/dates'
 import { t } from '../lib/i18n'
 
 export const ClientForm = () => {
@@ -20,6 +22,9 @@ export const ClientForm = () => {
   const [schedule, setSchedule] = useState<ScheduleSlot[]>(existing?.schedule ?? [])
   const [pauseStart, setPauseStart] = useState(existing?.pauseStart ?? '')
   const [pauseEnd, setPauseEnd] = useState(existing?.pauseEnd ?? '')
+  const [rateEffectiveFrom, setRateEffectiveFrom] = useState(todayStr())
+
+  const rateChanged = !!existing && Number(hourlyRate) !== existing.hourlyRate
 
   const addSlot = () => setSchedule(prev => [...prev, { dayOfWeek: 1, time: '10:00', duration: defaultDuration }])
   const removeSlot = (i: number) => setSchedule(prev => prev.filter((_, idx) => idx !== i))
@@ -42,7 +47,12 @@ export const ClientForm = () => {
       pauseEnd: pauseEnd || undefined,
     }
     if (existing) {
-      updateClient(existing.id, data)
+      // A rate change takes effect from the chosen date: sessions before it
+      // keep billing at the old rate via the client's rate history.
+      const rateFields = rateChanged
+        ? withRateChange(existing, rateNum, rateEffectiveFrom || todayStr())
+        : {}
+      updateClient(existing.id, { ...data, ...rateFields })
       navigate(`/clients/${existing.id}`)
     } else {
       const c = addClient(data)
@@ -67,7 +77,15 @@ export const ClientForm = () => {
           <Input label={t.clientPhone} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="85291234567" />
           <p className="text-xs text-slate-400 mt-1">{t.clientPhoneHint}</p>
         </div>
-        <Input label={t.hourlyRate} type="number" min={1} value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="例：800" />
+        <div>
+          <Input label={t.hourlyRate} type="number" min={1} value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="例：800" />
+          {rateChanged && (
+            <div className="mt-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 space-y-2">
+              <Input label={t.rateEffectiveFrom} type="date" value={rateEffectiveFrom} onChange={e => setRateEffectiveFrom(e.target.value)} />
+              <p className="text-xs text-amber-700 dark:text-amber-400">{t.rateChangeHint}</p>
+            </div>
+          )}
+        </div>
         <Select label={t.defaultDuration} value={defaultDuration} onChange={e => setDefaultDuration(Number(e.target.value) as SessionDuration)}>
           <option value={0.5}>{t.halfHour}</option>
           <option value={1}>{t.oneHour}</option>

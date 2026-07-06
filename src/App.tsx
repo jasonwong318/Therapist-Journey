@@ -12,7 +12,10 @@ import { Invoices } from './pages/Invoices'
 import { InvoiceDetail } from './pages/InvoiceDetail'
 import { Settings } from './pages/Settings'
 import { t, setLang, getLang, type Lang } from './lib/i18n'
-import { useState } from 'react'
+import { hasPin } from './lib/appLock'
+import { setStorageWriteErrorHandler } from './lib/storage'
+import { LockScreen } from './components/LockScreen'
+import { useEffect, useState } from 'react'
 
 const AppShell = ({ dark, toggleDark, toggleLang }: { dark: boolean; toggleDark: () => void; lang: Lang; toggleLang: () => void }) => (
   <div className="min-h-svh bg-[#F6F9FC] dark:bg-[#0f0f14]">
@@ -78,11 +81,21 @@ function App() {
   const store = useStore()
   const { dark, toggleDark } = useDarkMode()
   const [lang, setLangState] = useState<Lang>(getLang())
+  const [locked, setLocked] = useState(() => hasPin())
   const toggleLang = () => {
     const next: Lang = lang === 'zh' ? 'en' : 'zh'
     setLang(next)
     setLangState(next)
   }
+
+  // Warn loudly if a data write fails (e.g. device storage full) — otherwise
+  // changes silently vanish, which is how data loss goes unnoticed.
+  useEffect(() => {
+    setStorageWriteErrorHandler(() => alert(t.storageWriteFailed))
+  }, [])
+
+  if (locked) return <LockScreen onUnlock={() => setLocked(false)} />
+
   return (
     <StoreContext.Provider value={store}>
       <BrowserRouter basename="/Therapist-Journey">
