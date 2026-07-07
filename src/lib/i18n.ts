@@ -45,7 +45,7 @@ type Translations = {
   lateCancelHint: string
   yearOverview: string
   rescheduleHint: string; swipeToCancelHint: string
-  sessionCancelledToast: string; undo: string
+  sessionCancelledToast: string; sessionCompletedToast: string; undo: string
   rateEffectiveFrom: string; rateChangeHint: string
   appLock: string; enterPin: string; unlock: string
   newPinLabel: string; confirmPinLabel: string; currentPinLabel: string
@@ -132,8 +132,8 @@ const zh: Translations = {
   lateCancelHint: '「臨時取消」會照常計費；「已取消」及「已改期」不計費。',
   yearOverview: '年度統計',
   rescheduleHint: '儲存後，原本課堂會標記為「已改期」，並會喺上面揀選嘅新日期自動新增一堂。',
-  swipeToCancelHint: '提示：課堂向左滑可快速取消',
-  sessionCancelledToast: '已取消課堂', undo: '復原',
+  swipeToCancelHint: '提示：課堂向左滑取消，向右滑標記完成',
+  sessionCancelledToast: '已取消課堂', sessionCompletedToast: '已標記為完成', undo: '復原',
   rateEffectiveFrom: '新時薪生效日期',
   rateChangeHint: '生效日之前的課堂維持舊時薪計算，之後的課堂按新時薪計算。',
   appLock: '應用程式鎖（PIN）', enterPin: '請輸入 PIN 解鎖', unlock: '解鎖',
@@ -231,8 +231,8 @@ const en: Translations = {
   lateCancelHint: '"Late Cancel" is still billed; "Cancelled" and "Rescheduled" are not.',
   yearOverview: 'Year Overview',
   rescheduleHint: 'On save, this session is marked "Rescheduled" and a new session is added on the date chosen above.',
-  swipeToCancelHint: 'Tip: swipe a session left to cancel it',
-  sessionCancelledToast: 'Session cancelled', undo: 'Undo',
+  swipeToCancelHint: 'Tip: swipe a session left to cancel, right to complete',
+  sessionCancelledToast: 'Session cancelled', sessionCompletedToast: 'Marked as completed', undo: 'Undo',
   rateEffectiveFrom: 'New rate effective from',
   rateChangeHint: 'Sessions before this date keep the old rate; sessions on/after it bill at the new rate.',
   appLock: 'App Lock (PIN)', enterPin: 'Enter PIN to unlock', unlock: 'Unlock',

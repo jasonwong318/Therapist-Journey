@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useStoreCtx } from '../hooks/StoreContext'
 import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
@@ -51,6 +51,40 @@ export const Calendar = () => {
     ensureSessionsForMonth(y, m)
   }
 
+  // Swipe left/right anywhere on the grid to change month (horizontal intent
+  // only, so vertical page scrolling is unaffected).
+  const swipeStart = useRef<{ x: number; y: number } | null>(null)
+  const onGridTouchStart = (e: React.TouchEvent) => {
+    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+  const onGridTouchEnd = (e: React.TouchEvent) => {
+    if (!swipeStart.current) return
+    const dx = e.changedTouches[0].clientX - swipeStart.current.x
+    const dy = e.changedTouches[0].clientY - swipeStart.current.y
+    swipeStart.current = null
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) nextMonth()
+      else prevMonth()
+    }
+  }
+
+  // Long-press a day cell to jump straight to adding a session on that date.
+  const longPress = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean }>({ timer: null, fired: false })
+  const startLongPress = (dateStr: string, isCurrentMonth: boolean) => {
+    if (!isCurrentMonth) return
+    longPress.current.fired = false
+    longPress.current.timer = setTimeout(() => {
+      longPress.current.fired = true
+      navigator.vibrate?.(10)
+      setSelectedDate(dateStr)
+      setAddSessionModal(true)
+    }, 500)
+  }
+  const cancelLongPress = () => {
+    if (longPress.current.timer) clearTimeout(longPress.current.timer)
+    longPress.current.timer = null
+  }
+
   const selectedSessions = selectedDate ? (dayMap[selectedDate] ?? []).sort((a, b) => a.startTime.localeCompare(b.startTime)) : []
   const selectedHolidayLabel = selectedDate ? getHolidayLabel(selectedDate) : null
   const selectedIsUserHoliday = selectedDate ? isUserHoliday(selectedDate) : false
@@ -74,7 +108,17 @@ export const Calendar = () => {
         </div>
       </div>
 
-      {/* Day headers */}
+      {/* Day headers + grid (swipe horizontally to change month) */}
+      <div
+        onTouchStart={onGridTouchStart}
+        onTouchMove={e => {
+          if (!swipeStart.current) return
+          const dx = e.touches[0].clientX - swipeStart.current.x
+          const dy = e.touches[0].clientY - swipeStart.current.y
+          if (Math.abs(dx) > 10 || Math.abs(dy) > 10) cancelLongPress()
+        }}
+        onTouchEnd={onGridTouchEnd}
+      >
       <div className="grid grid-cols-7 mb-1">
         {t.dayLabels.map((d, i) => (
           <div key={i} className="text-center text-xs font-medium text-slate-400 py-1">{d}</div>
@@ -99,8 +143,16 @@ export const Calendar = () => {
               return (
                 <button
                   key={di}
-                  onClick={() => isCurrentMonth && setSelectedDate(isSelected ? null : dateStr)}
-                  className={`aspect-square flex flex-col items-center justify-start pt-1 rounded-xl relative transition-colors ${
+                  onClick={() => {
+                    if (longPress.current.fired) { longPress.current.fired = false; return }
+                    if (isCurrentMonth) setSelectedDate(isSelected ? null : dateStr)
+                  }}
+                  onTouchStart={() => startLongPress(dateStr, isCurrentMonth)}
+                  onTouchEnd={cancelLongPress}
+                  onTouchCancel={cancelLongPress}
+                  onContextMenu={e => e.preventDefault()}
+                  style={{ WebkitTouchCallout: 'none' }}
+                  className={`select-none aspect-square flex flex-col items-center justify-start pt-1 rounded-xl relative transition-colors ${
                     !isCurrentMonth ? 'opacity-20 cursor-default' : ''
                   } ${isSelected ? 'bg-[#635BFF] text-white' : isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 text-[#635BFF]' : isHol ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                 >
@@ -125,6 +177,7 @@ export const Calendar = () => {
             })}
           </div>
         ))}
+      </div>
       </div>
 
       {/* Selected day panel */}

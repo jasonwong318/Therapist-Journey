@@ -20,13 +20,14 @@ const STATUS_COLORS: Record<SessionStatus, 'green' | 'slate' | 'indigo' | 'orang
   late_cancel: 'orange',
 }
 
-// Row that can be swiped left to reveal a cancel action. Swiping past the
-// threshold fires onSwipeCancel immediately (no confirm — the session modal
-// can undo by setting the status back).
-const SWIPE_TRIGGER = -72
-const SwipeableRow = ({ enabled, onSwipeCancel, onClick, className, children }: {
+// Row with iOS-style swipe actions: swipe left to cancel, swipe right to mark
+// completed. Swiping past the threshold fires immediately (no confirm — the
+// undo snackbar / session modal can revert).
+const SWIPE_TRIGGER = 72
+const SwipeableRow = ({ enabled, onSwipeLeft, onSwipeRight, onClick, className, children }: {
   enabled: boolean
-  onSwipeCancel: () => void
+  onSwipeLeft: () => void
+  onSwipeRight: () => void
   onClick: () => void
   className?: string
   children: React.ReactNode
@@ -47,21 +48,28 @@ const SwipeableRow = ({ enabled, onSwipeCancel, onClick, className, children }: 
     const ddx = e.touches[0].clientX - start.current.x
     const ddy = e.touches[0].clientY - start.current.y
     if (!horizontal.current && Math.abs(ddx) > 10 && Math.abs(ddx) > Math.abs(ddy)) horizontal.current = true
-    if (horizontal.current) setDx(Math.max(-104, Math.min(0, ddx)))
+    if (horizontal.current) setDx(Math.max(-104, Math.min(104, ddx)))
   }
   const onTouchEnd = () => {
     if (!enabled || !start.current) return
-    const fired = dx <= SWIPE_TRIGGER
+    const firedLeft = dx <= -SWIPE_TRIGGER
+    const firedRight = dx >= SWIPE_TRIGGER
     start.current = null
     setDragging(false)
     setDx(0)
-    if (fired) onSwipeCancel()
+    if (firedLeft) onSwipeLeft()
+    else if (firedRight) onSwipeRight()
   }
 
   return (
     <div className={`relative overflow-hidden ${className ?? ''}`}>
-      <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-5" aria-hidden>
-        <span className="text-white text-sm font-semibold">{t.statusLabels.cancelled}</span>
+      <div className="absolute inset-0 flex items-center justify-between" aria-hidden>
+        <div className={`h-full flex-1 bg-emerald-500 flex items-center pl-5 ${dx > 0 ? '' : 'opacity-0'}`}>
+          <span className="text-white text-sm font-semibold">{t.statusLabels.completed}</span>
+        </div>
+        <div className={`h-full flex-1 bg-red-500 flex items-center justify-end pr-5 ${dx < 0 ? '' : 'opacity-0'}`}>
+          <span className="text-white text-sm font-semibold">{t.statusLabels.cancelled}</span>
+        </div>
       </div>
       <button
         className="relative w-full flex items-center gap-3 px-4 py-3.5 text-left bg-white dark:bg-slate-800 active:bg-slate-50 dark:active:bg-slate-700"
@@ -96,7 +104,8 @@ export const ClientDetail = () => {
   const [newTime, setNewTime] = useState('10:00')
   const [newDuration, setNewDuration] = useState<SessionDuration>(1)
   const [newStatus, setNewStatus] = useState<'scheduled' | 'completed'>('completed')
-  const [undoCancel, setUndoCancel] = useState<string | null>(null) // session id of last swipe-cancel
+  // Last swipe action, so the snackbar can undo it (back to 'scheduled').
+  const [undoAction, setUndoAction] = useState<{ id: string; status: 'cancelled' | 'completed' } | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current) }, [])
 
@@ -197,17 +206,17 @@ export const ClientDetail = () => {
     setActiveSession(null)
   }
 
-  const handleSwipeCancel = (sessionId: string) => {
-    updateSession(sessionId, { status: 'cancelled' })
-    setUndoCancel(sessionId)
+  const handleSwipeStatus = (sessionId: string, status: 'cancelled' | 'completed') => {
+    updateSession(sessionId, { status })
+    setUndoAction({ id: sessionId, status })
     if (undoTimer.current) clearTimeout(undoTimer.current)
-    undoTimer.current = setTimeout(() => setUndoCancel(null), 6000)
+    undoTimer.current = setTimeout(() => setUndoAction(null), 6000)
   }
 
-  const handleUndoCancel = () => {
-    if (!undoCancel) return
-    updateSession(undoCancel, { status: 'scheduled' })
-    setUndoCancel(null)
+  const handleUndoSwipe = () => {
+    if (!undoAction) return
+    updateSession(undoAction.id, { status: 'scheduled' })
+    setUndoAction(null)
     if (undoTimer.current) clearTimeout(undoTimer.current)
   }
 
@@ -356,7 +365,8 @@ export const ClientDetail = () => {
                 <SwipeableRow
                   key={session.id}
                   enabled={session.status === 'scheduled'}
-                  onSwipeCancel={() => handleSwipeCancel(session.id)}
+                  onSwipeLeft={() => handleSwipeStatus(session.id, 'cancelled')}
+                  onSwipeRight={() => handleSwipeStatus(session.id, 'completed')}
                   onClick={() => openSession(session)}
                   className={i < clientSessions.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}
                 >
@@ -500,12 +510,12 @@ export const ClientDetail = () => {
         )}
       </Modal>
 
-      {/* Undo snackbar after swipe-cancel */}
-      {undoCancel && (
+      {/* Undo snackbar after a swipe action */}
+      {undoAction && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-slate-900 dark:bg-slate-700 text-white pl-4 pr-2 py-2 rounded-full shadow-lg">
-          <span className="text-sm">{t.sessionCancelledToast}</span>
+          <span className="text-sm">{undoAction.status === 'completed' ? t.sessionCompletedToast : t.sessionCancelledToast}</span>
           <button
-            onClick={handleUndoCancel}
+            onClick={handleUndoSwipe}
             className="text-sm font-semibold text-amber-300 px-3 py-1.5 rounded-full hover:bg-white/10"
           >
             {t.undo}
