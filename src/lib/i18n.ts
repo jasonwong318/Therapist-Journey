@@ -56,6 +56,7 @@ type Translations = {
   backupPassphraseLabel: string; backupPassphraseHint: string; enterBackupPassphrase: string
   backupHistory: string; noBackupHistory: string; restoreThisVersion: string
   annualReport: string; exportCSV: string
+  appVersion: string
   bulkPauseTitle: string; bulkPauseHint: string; applyBulkPause: string; clearAllPauses: string
   bulkPauseApplied: (n: number) => string; bulkPauseCleared: (n: number) => string; bulkPauseInvalid: string
   autoBackupLabel: string; autoBackupHint: string
@@ -150,6 +151,7 @@ const zh: Translations = {
   enterBackupPassphrase: '此備份已加密，請輸入備份加密密碼：',
   backupHistory: '檢視備份歷史', noBackupHistory: '沒有備份紀錄。', restoreThisVersion: '還原此版本',
   annualReport: '年度收入報表', exportCSV: '匯出 CSV',
+  appVersion: '版本',
   bulkPauseTitle: '批量暫停排課（如暑假）',
   bulkPauseHint: '一次過為所有客人設定相同的暫停日期，期間不會自動排課，期後自動回復。個別客人可在其編輯頁面另行調整。',
   applyBulkPause: '套用至所有客人', clearAllPauses: '清除所有暫停',
@@ -249,6 +251,7 @@ const en: Translations = {
   enterBackupPassphrase: 'This backup is encrypted. Enter the backup passphrase:',
   backupHistory: 'View backup history', noBackupHistory: 'No backup history.', restoreThisVersion: 'Restore',
   annualReport: 'Annual Income Report', exportCSV: 'Export CSV',
+  appVersion: 'Version',
   bulkPauseTitle: 'Bulk Pause Scheduling (e.g. summer break)',
   bulkPauseHint: 'Set the same pause period for all clients at once. No sessions are auto-scheduled during the period; the schedule resumes afterwards. Individual clients can be adjusted on their edit page.',
   applyBulkPause: 'Apply to All Clients', clearAllPauses: 'Clear All Pauses',

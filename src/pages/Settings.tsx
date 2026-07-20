@@ -442,7 +442,10 @@ export const Settings = () => {
         </Card>
       </div>
 
-      <p className="text-xs text-slate-400 text-center pb-4">{t.dataLocal}</p>
+      <p className="text-xs text-slate-400 text-center">{t.dataLocal}</p>
+      <p className="text-[10px] text-slate-300 dark:text-slate-600 text-center pb-4">
+        {t.appVersion}: {__BUILD_DATE__}
+      </p>
     </div>
   )
 }

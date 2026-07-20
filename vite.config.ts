@@ -5,6 +5,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: '/Therapist-Journey/',
+  // Shown in Settings so we can tell at a glance which build a device runs.
+  define: {
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'),
+  },
   plugins: [
     react(),
     tailwindcss(),

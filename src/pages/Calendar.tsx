@@ -135,7 +135,9 @@ export const Calendar = () => {
               const isToday = dateStr === today
               const isSelected = dateStr === selectedDate
               const daySessions = dayMap[dateStr] ?? []
-              const activeSessions = daySessions.filter(s => s.status !== 'cancelled')
+              // Rescheduled sessions moved away from this date — showing their
+              // dot here made the calendar look out of sync with client detail.
+              const activeSessions = daySessions.filter(s => s.status !== 'cancelled' && s.status !== 'rescheduled')
               const holLabel = getHolidayLabel(dateStr)
               const isHol = !!holLabel && isCurrentMonth
               const hasContent = (daySessions.length > 0 || isHol) && isCurrentMonth

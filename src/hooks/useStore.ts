@@ -75,6 +75,34 @@ export const useStore = () => {
     return () => clearTimeout(timer)
   }, [clients, sessions, invoices, holidays, settings])
 
+  // Keep multiple open tabs/windows in sync: when another tab writes tt_* keys
+  // (storage event), or this tab comes back to the foreground (bfcache/PWA
+  // resume), re-read localStorage so stale in-memory state can't overwrite or
+  // hide newer data.
+  useEffect(() => {
+    const reload = () => {
+      setClientsState(loadClients())
+      setSessionsState(loadSessions())
+      setInvoicesState(loadInvoices())
+      setSettingsState(loadSettings())
+      setHolidaysState(loadHolidays())
+    }
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key.startsWith('tt_')) reload()
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reload()
+    }
+    window.addEventListener('storage', onStorage)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pageshow', reload)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pageshow', reload)
+    }
+  }, [])
+
   const setClients = useCallback((updater: Client[] | ((prev: Client[]) => Client[])) => {
     setClientsState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater
